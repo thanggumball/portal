@@ -6,7 +6,6 @@ namespace StudentPortal.Service.Implementations;
 
 public class AuthService : IAuthService
 {
-    private
     public Task<UserResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
         => throw new NotImplementedException();
 
