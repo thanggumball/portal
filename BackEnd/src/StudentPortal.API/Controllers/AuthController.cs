@@ -1,0 +1,58 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using StudentPortal.Common.DTOs.Auth;
+using StudentPortal.Common.DTOs.Shared;
+using StudentPortal.Common.DTOs.User;
+using StudentPortal.Service.Interfaces;
+
+namespace StudentPortal.API.Controllers;
+
+[ApiController]
+[Route("api/auth")]
+public class AuthController : ControllerBase
+{
+    private readonly IAuthService _authService;
+
+    public AuthController(IAuthService authService)
+    {
+        _authService = authService;
+    }
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(RegisterRequest request, CancellationToken ct)
+    {
+        var result = await _authService.RegisterAsync(request, ct);
+        return StatusCode(StatusCodes.Status201Created, ApiResponse<UserResponse>.Ok(result));
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
+    {
+        var result = await _authService.LoginAsync(request, ct);
+        return Ok(ApiResponse<LoginResponse>.Ok(result));
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(RefreshTokenRequest request, CancellationToken ct)
+    {
+        var result = await _authService.RefreshTokenAsync(request, ct);
+        return Ok(ApiResponse<LoginResponse>.Ok(result));
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(LogoutRequest request, CancellationToken ct)
+    {
+        await _authService.LogoutAsync(request, ct);
+        return NoContent();
+    }
+
+    [Authorize]
+    [HttpPut("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        await _authService.ChangePasswordAsync(userId, request, ct);
+        return NoContent();
+    }
+}

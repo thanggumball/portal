@@ -1,0 +1,9 @@
+﻿bin/
+obj/
+.vs/
+*.user
+appsettings.*.local.json
+src/*/Logs/
+src/*/wwwroot/uploads/*
+!src/*/wwwroot/uploads/**/.gitkeep
+database/init_all.sql

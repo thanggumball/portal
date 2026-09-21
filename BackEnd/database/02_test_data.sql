@@ -1,0 +1,7 @@
+﻿-- ============================================================
+--  02_test_data.sql - data to verify index usage
+--  Seeds 50,000 rows into Users. Without enough data SQL Server
+--  will choose a scan because it's cheaper, and conclusions about
+--  index usage would be wrong.
+--  Stage 6 in IMPLEMENTATION_PLAN.md
+-- ============================================================
