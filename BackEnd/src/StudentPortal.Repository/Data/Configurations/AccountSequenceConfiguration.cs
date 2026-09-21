@@ -8,6 +8,10 @@ public class AccountSequenceConfiguration : IEntityTypeConfiguration<AccountSequ
 {
     public void Configure(EntityTypeBuilder<AccountSequence> builder)
     {
+        builder.Property(x => x.Id)
+            .HasDefaultValueSql("NEWSEQUENTIALID()")
+            .ValueGeneratedOnAdd();
+
         builder.Property(x => x.AccountType)
             .HasColumnType("varchar(20)")
             .IsRequired();
