@@ -4,5 +4,7 @@ namespace StudentPortal.Repository.Interfaces;
 
 public interface IRefreshTokenRepository : IGenericRepository<RefreshToken>
 {
-    Task<RefreshToken?> FindActiveByTokenHashAsync(string tokenHash, CancellationToken ct = default);
+    Task<RefreshToken?> FindByTokenHashAsync(
+        string tokenHash,
+        CancellationToken ct = default);
 }
