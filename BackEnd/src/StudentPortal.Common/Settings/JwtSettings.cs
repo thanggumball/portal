@@ -2,9 +2,15 @@ namespace StudentPortal.Common.Settings;
 
 public class JwtSettings
 {
-    public string SecretKey { get; init; } = string.Empty;
-    public string Issuer { get; init; } = string.Empty;
-    public string Audience { get; init; } = string.Empty;
-    public int AccessTokenExpiryMinutes { get; init; }
-    public int RefreshTokenExpiryDays { get; init; }
+    public const string SectionName = "Jwt";
+
+    public string SecretKey { get; set; } = string.Empty;
+
+    public string Issuer { get; set; } = string.Empty;
+
+    public string Audience { get; set; } = string.Empty;
+
+    public int AccessTokenExpirationMinutes { get; set; }
+
+    public int RefreshTokenExpirationDays { get; set; }
 }
