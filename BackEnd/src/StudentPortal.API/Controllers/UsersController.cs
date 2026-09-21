@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StudentPortal.Common.Constants;
+using StudentPortal.Common.DTOs.Shared;
 using StudentPortal.Common.DTOs.User;
+using StudentPortal.Service.Interfaces;
 
 namespace StudentPortal.API.Controllers;
 
@@ -10,27 +12,56 @@ namespace StudentPortal.API.Controllers;
 [Route("api/users")]
 public class UsersController : ControllerBase
 {
+    private readonly IUserService _userService;
+
+    public UsersController(IUserService userService)
+    {
+        _userService = userService;
+    }
+
     [HttpGet]
-    public Task<IActionResult> Search([FromQuery] UserFilter filter, CancellationToken ct)
+    public Task<IActionResult> Search(
+        [FromQuery] UserFilter filter,
+        CancellationToken ct)
         => throw new NotImplementedException();
 
     [HttpGet("{id:guid}")]
-    public Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    public Task<IActionResult> GetById(
+        Guid id,
+        CancellationToken ct)
         => throw new NotImplementedException();
 
     [HttpPost]
-    public Task<IActionResult> Create(CreateUserRequest request, CancellationToken ct)
-        => throw new NotImplementedException();
+    public async Task<IActionResult> Create(
+        CreateUserRequest request,
+        CancellationToken ct)
+    {
+        var result = await _userService.CreateUserAsync(
+            request,
+            ct);
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            ApiResponse<UserResponse>.Ok(result));
+    }
 
     [HttpPut("{id:guid}")]
-    public Task<IActionResult> Update(Guid id, UpdateUserRequest request, CancellationToken ct)
+    public Task<IActionResult> Update(
+        Guid id,
+        UpdateUserRequest request,
+        CancellationToken ct)
         => throw new NotImplementedException();
 
     [HttpPatch("{id:guid}/status")]
-    public Task<IActionResult> UpdateStatus(Guid id, UpdateUserStatusRequest request, CancellationToken ct)
+    public Task<IActionResult> UpdateStatus(
+        Guid id,
+        UpdateUserStatusRequest request,
+        CancellationToken ct)
         => throw new NotImplementedException();
 
     [HttpDelete("{id:guid}")]
-    public Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    public Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken ct)
         => throw new NotImplementedException();
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StudentPortal.Repository.Data;
 
@@ -11,9 +12,11 @@ using StudentPortal.Repository.Data;
 namespace StudentPortal.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921084809_ConfigureAccountSequenceId")]
+    partial class ConfigureAccountSequenceId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -73,11 +76,6 @@ namespace StudentPortal.Repository.Migrations
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("RoleReceived")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(1);
-
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -110,32 +108,6 @@ namespace StudentPortal.Repository.Migrations
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("Status", "PublishedAt"), new[] { "Title", "Summary" });
 
                     b.ToTable("Announcements");
-                });
-
-            modelBuilder.Entity("StudentPortal.Repository.Entities.AnnouncementCategory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("NEWSEQUENTIALID()");
-
-                    b.Property<Guid>("AnnouncementId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("CategoryId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("AnnouncementId", "CategoryId")
-                        .IsUnique();
-
-                    b.ToTable("AnnouncementCategory", (string)null);
                 });
 
             modelBuilder.Entity("StudentPortal.Repository.Entities.AuditLog", b =>
@@ -186,29 +158,6 @@ namespace StudentPortal.Repository.Migrations
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("UserId", "CreatedAt"), new[] { "Action", "EntityName", "EntityId" });
 
                     b.ToTable("AuditLogs");
-                });
-
-            modelBuilder.Entity("StudentPortal.Repository.Entities.Category", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("NEWSEQUENTIALID()");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("StudentPortal.Repository.Entities.EmailWhitelist", b =>
@@ -371,17 +320,17 @@ namespace StudentPortal.Repository.Migrations
                         .HasDatabaseName("UX_Users_Email")
                         .HasFilter("[IsDeleted] = 0");
 
+                    b.HasIndex("UserName")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Users_UserName")
+                        .HasFilter("[IsDeleted] = 0");
+
                     b.HasIndex("RoleId", "CreatedAt")
                         .IsDescending(false, true)
                         .HasDatabaseName("IX_Users_RoleId_CreatedAt")
                         .HasFilter("[IsDeleted] = 0");
 
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("RoleId", "CreatedAt"), new[] { "Email", "FullName", "UserCode", "LastLoginAt" });
-
-                    b.HasIndex("RoleId", "UserName")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Users_RoleId_UserName")
-                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Users");
                 });
@@ -441,25 +390,6 @@ namespace StudentPortal.Repository.Migrations
                     b.Navigation("Updater");
                 });
 
-            modelBuilder.Entity("StudentPortal.Repository.Entities.AnnouncementCategory", b =>
-                {
-                    b.HasOne("StudentPortal.Repository.Entities.Announcement", "Announcement")
-                        .WithMany("AnnouncementCategory")
-                        .HasForeignKey("AnnouncementId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("StudentPortal.Repository.Entities.Category", "Category")
-                        .WithMany("AnnouncementCategory")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Announcement");
-
-                    b.Navigation("Category");
-                });
-
             modelBuilder.Entity("StudentPortal.Repository.Entities.AuditLog", b =>
                 {
                     b.HasOne("StudentPortal.Repository.Entities.User", "User")
@@ -501,16 +431,6 @@ namespace StudentPortal.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("StudentPortal.Repository.Entities.Announcement", b =>
-                {
-                    b.Navigation("AnnouncementCategory");
-                });
-
-            modelBuilder.Entity("StudentPortal.Repository.Entities.Category", b =>
-                {
-                    b.Navigation("AnnouncementCategory");
                 });
 
             modelBuilder.Entity("StudentPortal.Repository.Entities.Role", b =>
