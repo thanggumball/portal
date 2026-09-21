@@ -15,7 +15,7 @@ public static class ServiceCollectionExtensions
         services.AddRepositoryLayer(connectionString);
 
         services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<JwtTokenHelper>();
+        services.AddScoped<IJwtTokenHelper, JwtTokenHelper>();
 
         return services;
     }

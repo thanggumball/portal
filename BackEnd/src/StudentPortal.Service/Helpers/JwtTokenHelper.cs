@@ -3,10 +3,11 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using StudentPortal.Common.Settings;
+using StudentPortal.Service.Interfaces;
 
 namespace StudentPortal.Service.Helpers;
 
-public class JwtTokenHelper
+public class JwtTokenHelper : IJwtTokenHelper
 {
     private readonly JwtSettings _jwtSettings;
 

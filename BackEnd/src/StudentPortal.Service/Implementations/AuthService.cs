@@ -1,12 +1,13 @@
+using System.Security.Cryptography;
 using StudentPortal.Common.DTOs.Auth;
 using StudentPortal.Common.DTOs.User;
 using StudentPortal.Common.Enums;
+using StudentPortal.Common.Settings;
 using StudentPortal.Repository.Entities;
 using StudentPortal.Repository.Interfaces;
-using StudentPortal.Service.Interfaces;
-using System.Security.Cryptography;
 using StudentPortal.Service.Helpers;
-using StudentPortal.Common.Settings;
+using StudentPortal.Service.Interfaces;
+using StudentPortal.Common.Exceptions;
 
 namespace StudentPortal.Service.Implementations;
 
@@ -17,8 +18,7 @@ public class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IUnitOfWork _unitOfWork;
-
-    private readonly JwtTokenHelper _jwtTokenHelper;
+    private readonly IJwtTokenHelper _jwtTokenHelper;
     private readonly JwtSettings _jwtSettings;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
 
@@ -27,7 +27,7 @@ public class AuthService : IAuthService
         IRoleRepository roleRepository,
         IUnitOfWork unitOfWork,
         IRefreshTokenRepository refreshTokenRepository,
-        JwtTokenHelper jwtTokenHelper,
+        IJwtTokenHelper jwtTokenHelper,
         JwtSettings jwtSettings)
     {
         _userRepository = userRepository;
@@ -48,7 +48,7 @@ public class AuthService : IAuthService
 
         if (emailExists)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 "An account with this email already exists.");
         }
 
@@ -58,7 +58,7 @@ public class AuthService : IAuthService
 
         if (userNameExists is not null)
         {
-            throw new InvalidOperationException(
+            throw new ConflictException(
                 "An account with this username already exists.");
         }
 
@@ -168,31 +168,31 @@ public class AuthService : IAuthService
     }
 
     public async Task<LoginResponse> RefreshTokenAsync(
-    RefreshTokenRequest request,
-    CancellationToken ct = default)
+        RefreshTokenRequest request,
+        CancellationToken ct = default)
     {
         var tokenHash = Convert.ToHexString(
             SHA256.HashData(
                 System.Text.Encoding.UTF8.GetBytes(request.RefreshToken)));
 
-        var refreshToken = await _refreshTokenRepository
+        var storedRefreshToken = await _refreshTokenRepository
             .FindByTokenHashAsync(tokenHash, ct);
 
-        if (refreshToken is null)
+        if (storedRefreshToken is null)
         {
             throw new UnauthorizedAccessException(
                 "Invalid refresh token.");
         }
 
-        if (refreshToken.RevokedAt.HasValue ||
-            refreshToken.ExpiresAt <= DateTime.UtcNow)
+        if (storedRefreshToken.RevokedAt.HasValue ||
+            storedRefreshToken.ExpiresAt <= DateTime.UtcNow)
         {
             throw new UnauthorizedAccessException(
                 "Refresh token is expired or revoked.");
         }
 
         var user = await _userRepository.GetByIdWithRoleAsync(
-            refreshToken.UserId,
+            storedRefreshToken.UserId,
             ct);
 
         if (user is null ||
@@ -208,10 +208,35 @@ public class AuthService : IAuthService
             user.Email,
             user.Role.Name);
 
+        var newRefreshToken = Convert.ToBase64String(
+            RandomNumberGenerator.GetBytes(64));
+
+        var newRefreshTokenHash = Convert.ToHexString(
+            SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(newRefreshToken)));
+
+        storedRefreshToken.RevokedAt = DateTime.UtcNow;
+        _refreshTokenRepository.Update(storedRefreshToken);
+
+        var newRefreshTokenEntity = new RefreshToken
+        {
+            UserId = user.Id,
+            TokenHash = newRefreshTokenHash,
+            ExpiresAt = DateTime.UtcNow.AddDays(
+                _jwtSettings.RefreshTokenExpirationDays),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _refreshTokenRepository.AddAsync(
+            newRefreshTokenEntity,
+            ct);
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
         return new LoginResponse
         {
             AccessToken = accessToken,
-            RefreshToken = request.RefreshToken,
+            RefreshToken = newRefreshToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(
                 _jwtSettings.AccessTokenExpirationMinutes)
         };
@@ -222,9 +247,41 @@ public class AuthService : IAuthService
         CancellationToken ct = default)
         => throw new NotImplementedException();
 
-    public Task ChangePasswordAsync(
+    public async Task ChangePasswordAsync(
         Guid userId,
         ChangePasswordRequest request,
         CancellationToken ct = default)
-        => throw new NotImplementedException();
+    {
+        var user = await _userRepository.GetByIdAsync(userId, ct);
+
+        if (user is null || user.IsDeleted)
+        {
+            throw new NotFoundException("User not found.");
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(
+                request.CurrentPassword,
+                user.PasswordHash))
+        {
+            throw new UnauthorizedAccessException(
+                "Current password is incorrect.");
+        }
+
+        if (BCrypt.Net.BCrypt.Verify(
+                request.NewPassword,
+                user.PasswordHash))
+        {
+            throw new BadRequestException(
+                "New password must be different from current password.");
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+            request.NewPassword);
+
+        user.UpdatedAt = DateTime.UtcNow;
+
+        _userRepository.Update(user);
+
+        await _unitOfWork.SaveChangesAsync(ct);
+    }
 }
