@@ -22,4 +22,9 @@ public class AnnouncementRepository : GenericRepository<Announcement>, IAnnounce
 
         return (items, total);
     }
+
+    public async Task<IEnumerable<Announcement>> GetAnnouncementsAsync()
+    {
+        var resultSet = await _context.Announcements.Get
+    }
 }

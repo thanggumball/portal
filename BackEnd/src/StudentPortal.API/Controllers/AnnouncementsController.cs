@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using StudentPortal.Common.Constants;
 using StudentPortal.Common.DTOs.Announcement;
 
-
 namespace StudentPortal.API.Controllers;
 
 [Authorize]

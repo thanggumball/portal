@@ -41,13 +41,13 @@ public class ExceptionHandlingMiddleware
 
         var (statusCode, message) = exception switch
         {
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, exception.Message),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message),
             BadRequestException => (StatusCodes.Status400BadRequest, exception.Message),
             ForbiddenException => (StatusCodes.Status403Forbidden, exception.Message),
             ConflictException => (StatusCodes.Status409Conflict, exception.Message),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again later.")
         };
-
         if (statusCode == StatusCodes.Status500InternalServerError)
         {
             _logger.LogError(exception, "Unhandled error at {Path}", context.Request.Path);
