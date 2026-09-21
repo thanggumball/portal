@@ -33,9 +33,10 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .MaximumLength(100)
             .WithMessage("Full name must not exceed 100 characters.");
 
-        RuleFor(x => x.StudentCode)
+        RuleFor(x => x.UserCode)
             .MaximumLength(20)
             .WithMessage("Student code must not exceed 20 characters.")
-            .When(x => !string.IsNullOrWhiteSpace(x.StudentCode));
+            .When(x => !string.IsNullOrWhiteSpace(x.UserCode));
     }
 }
+
