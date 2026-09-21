@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using StudentPortal.Repository;
+using StudentPortal.Repository.Implementations;
+using StudentPortal.Repository.Interfaces;
 using StudentPortal.Service.Helpers;
 using StudentPortal.Service.Implementations;
 using StudentPortal.Service.Interfaces;
@@ -13,7 +15,8 @@ public static class ServiceCollectionExtensions
         string connectionString)
     {
         services.AddRepositoryLayer(connectionString);
-
+        services.AddScoped<IAccountSequenceRepository, AccountSequenceRepository>();
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtTokenHelper, JwtTokenHelper>();
 
