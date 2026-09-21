@@ -13,7 +13,9 @@ public class Announcement : BaseEntity
     public Guid? UpdatedBy { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public AnnouncementRoleReceived RoleReceived { get; set; }
 
+    public ICollection<AnnouncementCategory> AnnouncementCategory { get; set; } = new List<AnnouncementCategory>();
     public User Creator { get; set; } = null!;
     public User? Updater { get; set; }
 }

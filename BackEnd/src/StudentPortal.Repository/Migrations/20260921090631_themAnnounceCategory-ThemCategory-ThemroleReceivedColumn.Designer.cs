@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StudentPortal.Repository.Data;
 
@@ -11,9 +12,11 @@ using StudentPortal.Repository.Data;
 namespace StudentPortal.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921090631_themAnnounceCategory-ThemCategory-ThemroleReceivedColumn")]
+    partial class themAnnounceCategoryThemCategoryThemroleReceivedColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -48,9 +51,7 @@ namespace StudentPortal.Repository.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("RoleReceived")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(1);
+                        .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -109,7 +110,7 @@ namespace StudentPortal.Repository.Migrations
                     b.HasIndex("AnnouncementId", "CategoryId")
                         .IsUnique();
 
-                    b.ToTable("AnnouncementCategory", (string)null);
+                    b.ToTable("AnnouncementCategory");
                 });
 
             modelBuilder.Entity("StudentPortal.Repository.Entities.AuditLog", b =>
@@ -166,23 +167,18 @@ namespace StudentPortal.Repository.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Category");
                 });
 
             modelBuilder.Entity("StudentPortal.Repository.Entities.EmailWhitelist", b =>
