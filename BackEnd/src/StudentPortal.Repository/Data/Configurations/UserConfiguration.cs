@@ -47,10 +47,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasFilter("[IsDeleted] = 0")
             .HasDatabaseName("UX_Users_Email");
 
-        builder.HasIndex(u => u.UserName)
-            .IsUnique()
-            .HasFilter("[IsDeleted] = 0")
-            .HasDatabaseName("UX_Users_UserName");
+        builder.HasIndex(u => new { u.RoleId, u.UserName })
+           .IsUnique()
+           .HasFilter("[IsDeleted] = 0")
+           .HasDatabaseName("UX_Users_RoleId_UserName");
 
         builder.HasIndex(u => new { u.RoleId, u.CreatedAt })
             .IsDescending(false, true)

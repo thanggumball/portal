@@ -19,13 +19,6 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
-    [HttpPost("register")]
-    public async Task<IActionResult> Register(RegisterRequest request, CancellationToken ct)
-    {
-        var result = await _authService.RegisterAsync(request, ct);
-        return StatusCode(StatusCodes.Status201Created, ApiResponse<UserResponse>.Ok(result));
-    }
-
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {

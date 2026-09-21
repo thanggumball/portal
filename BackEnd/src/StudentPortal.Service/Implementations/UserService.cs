@@ -1,0 +1,139 @@
+using StudentPortal.Common.DTOs.User;
+using StudentPortal.Common.Enums;
+using StudentPortal.Common.Exceptions;
+using StudentPortal.Repository.Entities;
+using StudentPortal.Repository.Interfaces;
+using StudentPortal.Service.Interfaces;
+
+namespace StudentPortal.Service.Implementations;
+
+public class UserService : IUserService
+{
+    private const string StaffRole = "Staff";
+    private const string StudentRole = "Student";
+    private const string DefaultPassword = "Avepoint2026@";
+
+    private readonly IUserRepository _userRepository;
+    private readonly IRoleRepository _roleRepository;
+    private readonly IAccountSequenceRepository _accountSequenceRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public UserService(
+        IUserRepository userRepository,
+        IRoleRepository roleRepository,
+        IAccountSequenceRepository accountSequenceRepository,
+        IUnitOfWork unitOfWork)
+    {
+        _userRepository = userRepository;
+        _roleRepository = roleRepository;
+        _accountSequenceRepository = accountSequenceRepository;
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<UserResponse> CreateUserAsync(
+        CreateUserRequest request,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            throw new BadRequestException("Full name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.RoleName))
+        {
+            throw new BadRequestException("Role is required.");
+        }
+
+        var roleName = request.RoleName.Trim();
+
+        if (roleName != StaffRole && roleName != StudentRole)
+        {
+            throw new BadRequestException(
+                "Role must be either Staff or Student.");
+        }
+
+        var role = await _roleRepository.FindByNameAsync(
+            roleName,
+            ct);
+
+        if (role is null)
+        {
+            throw new InvalidOperationException(
+                $"Role '{roleName}' was not found.");
+        }
+
+        await using var transaction =
+            await _unitOfWork.BeginTransactionAsync(ct);
+
+        try
+        {
+            var sequence = await _accountSequenceRepository
+                .GetForUpdateAsync(roleName, ct);
+
+            if (sequence is null)
+            {
+                throw new InvalidOperationException(
+                    $"Account sequence for role '{roleName}' was not found.");
+            }
+
+            var userCode = sequence.NextNumber.ToString();
+
+            var domain = roleName == StaffRole
+                ? "staff.avepoint.com"
+                : "student.avepoint.com";
+
+            var email = $"{userCode}@{domain}";
+
+            if (await _userRepository.ExistsByEmailAsync(email, ct))
+            {
+                throw new ConflictException(
+                    $"An account with email '{email}' already exists.");
+            }
+
+            sequence.NextNumber++;
+
+            var now = DateTime.UtcNow;
+
+            var user = new User
+            {
+                Email = email,
+                UserName = userCode,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+                    DefaultPassword),
+                FullName = request.FullName.Trim(),
+                UserCode = userCode,
+                RoleId = role.Id,
+                Role = role,
+                Status = UserStatus.Active,
+                IsDeleted = false,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            _accountSequenceRepository.Update(sequence);
+            await _userRepository.AddAsync(user, ct);
+
+            await _unitOfWork.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            return new UserResponse
+            {
+                Id = user.Id,
+                Email = user.Email,
+                UserName = user.UserName,
+                FullName = user.FullName,
+                UserCode = user.UserCode,
+                RoleName = role.Name,
+                Status = user.Status,
+                AvatarUrl = user.AvatarUrl,
+                LastLoginAt = user.LastLoginAt,
+                CreatedAt = user.CreatedAt
+            };
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+}
