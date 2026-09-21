@@ -1,9 +1,11 @@
+using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
 using StudentPortal.API.Extensions;
 using StudentPortal.API.Middlewares;
 using StudentPortal.Common.DTOs.Shared;
 using StudentPortal.Service;
+using StudentPortal.Service.Validations.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +52,7 @@ builder.Services.AddCorsPolicy(
     builder.Configuration);
 
 builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 
 var connectionString = builder.Configuration.GetConnectionString(
     "DefaultConnection")
