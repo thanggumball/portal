@@ -8,6 +8,7 @@ using StudentPortal.Repository.Interfaces;
 using StudentPortal.Service.Helpers;
 using StudentPortal.Service.Interfaces;
 using StudentPortal.Common.Exceptions;
+using System.Runtime.Intrinsics.Arm;
 
 namespace StudentPortal.Service.Implementations;
 
@@ -242,10 +243,31 @@ public class AuthService : IAuthService
         };
     }
 
-    public Task LogoutAsync(
-        LogoutRequest request,
-        CancellationToken ct = default)
-        => throw new NotImplementedException();
+    public async Task LogoutAsync(
+     LogoutRequest request,
+     CancellationToken ct = default)
+    {
+        var tokenHash = Convert.ToHexString(
+            SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(request.RefreshToken)));
+
+        var refreshToken = await _refreshTokenRepository
+            .FindByTokenHashAsync(tokenHash, ct);
+
+        if (refreshToken is null)
+        {
+            return;
+        }
+
+        if (!refreshToken.RevokedAt.HasValue)
+        {
+            refreshToken.RevokedAt = DateTime.UtcNow;
+
+            _refreshTokenRepository.Update(refreshToken);
+
+            await _unitOfWork.SaveChangesAsync(ct);
+        }
+    }
 
     public async Task ChangePasswordAsync(
         Guid userId,
