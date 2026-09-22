@@ -1,5 +1,6 @@
 using MailService.API.Data;
 using MailService.API.Entities;
+using MailService.API.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace MailService.API.Repositories;
@@ -26,15 +27,29 @@ public class MailRepository : IMailRepository
         CancellationToken ct = default)
     {
         return await _context.Mails
-            .FirstOrDefaultAsync(
-                x => x.MessageId == messageId,
-                ct);
+            .FirstOrDefaultAsync(x => x.MessageId == messageId, ct);
     }
 
-    public async Task<List<Mail>> GetAllAsync(
+    public async Task<List<Mail>> GetInboxAsync(
+        string email,
         CancellationToken ct = default)
     {
         return await _context.Mails
+            .Where(x =>
+                x.To == email &&
+                x.Direction == MailDirection.Received)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Mail>> GetSentAsync(
+        string email,
+        CancellationToken ct = default)
+    {
+        return await _context.Mails
+            .Where(x =>
+                x.From == email &&
+                x.Direction == MailDirection.Sent)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(ct);
     }
@@ -52,3 +67,4 @@ public class MailRepository : IMailRepository
         await _context.SaveChangesAsync(ct);
     }
 }
+

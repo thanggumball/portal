@@ -16,6 +16,10 @@ builder.Services.AddDbContext<MailDbContext>(options =>
 builder.Services.AddScoped<IMailService, MailServiceImplementation>();
 builder.Services.AddScoped<IMailRepository, MailRepository>();
 
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<ICurrentMailUser, CurrentMailUser>();
+
 // Mail account services
 builder.Services.AddScoped<
     IMailAccountRepository,

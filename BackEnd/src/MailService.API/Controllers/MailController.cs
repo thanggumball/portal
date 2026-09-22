@@ -1,11 +1,13 @@
 using MailService.API.DTOs;
 using MailService.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MailService.API.Controllers;
 
 [ApiController]
 [Route("api/mail")]
+[Authorize]
 public class MailController : ControllerBase
 {
     private readonly IMailService _mailService;
@@ -15,23 +17,64 @@ public class MailController : ControllerBase
         _mailService = mailService;
     }
 
-    [HttpPost("send")]
+    [HttpPost]
     public async Task<IActionResult> Send(
         SendMailRequest request,
         CancellationToken ct)
     {
-        var result = await _mailService.SendAsync(request, ct);
+        try
+        {
+            var result = await _mailService.SendAsync(
+                request,
+                ct);
 
-        return Ok(result);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new
+            {
+                message = ex.Message
+            });
+        }
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetAll(
+    [HttpGet("inbox")]
+    public async Task<IActionResult> Inbox(
         CancellationToken ct)
     {
-        var result = await _mailService.GetAllAsync(ct);
+        try
+        {
+            var result = await _mailService.GetInboxAsync(ct);
 
-        return Ok(result);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+    [HttpGet("sent")]
+    public async Task<IActionResult> Sent(
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await _mailService.GetSentAsync(ct);
+
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new
+            {
+                message = ex.Message
+            });
+        }
     }
 
     [HttpGet("{id:guid}")]
@@ -39,13 +82,29 @@ public class MailController : ControllerBase
         Guid id,
         CancellationToken ct)
     {
-        var result = await _mailService.GetByIdAsync(id, ct);
-
-        if (result is null)
+        try
         {
-            return NotFound();
-        }
+            var result = await _mailService.GetByIdAsync(
+                id,
+                ct);
 
-        return Ok(result);
+            if (result is null)
+            {
+                return NotFound(new
+                {
+                    message = "Mail not found."
+                });
+            }
+
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new
+            {
+                message = ex.Message
+            });
+        }
     }
 }
+

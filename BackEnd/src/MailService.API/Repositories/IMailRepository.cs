@@ -12,7 +12,12 @@ public interface IMailRepository
         string messageId,
         CancellationToken ct = default);
 
-    Task<List<Mail>> GetAllAsync(
+    Task<List<Mail>> GetInboxAsync(
+        string email,
+        CancellationToken ct = default);
+
+    Task<List<Mail>> GetSentAsync(
+        string email,
         CancellationToken ct = default);
 
     Task AddAsync(
