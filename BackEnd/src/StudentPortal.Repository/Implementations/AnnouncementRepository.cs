@@ -22,4 +22,11 @@ public class AnnouncementRepository : GenericRepository<Announcement>, IAnnounce
 
         return (items, total);
     }
+
+    public async Task<IEnumerable<Announcement>> GetAnnouncementsAsync(CancellationToken cancellationToken)
+    {
+        var resultSet = await _context.Announcements.OrderByDescending(a => a.CreatedAt).ToListAsync();
+        return resultSet;
+    }
+
 }

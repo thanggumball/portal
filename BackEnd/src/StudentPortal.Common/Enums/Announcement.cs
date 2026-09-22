@@ -6,3 +6,9 @@ public enum AnnouncementStatus
     Published = 2,
     Archived = 3
 }
+public enum AnnouncementRoleReceived
+{
+    All = 1,
+    Student = 2,
+    Staff = 3
+}

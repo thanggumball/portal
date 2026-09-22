@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<AccountSequence> AccountSequences => Set<AccountSequence>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<AnnouncementCategory> AnnouncementCategory => Set<AnnouncementCategory>();
+    public DbSet<Category> Category => Set<Category>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<EmailWhitelist> EmailWhitelists => Set<EmailWhitelist>();
     public DbSet<UserMfa> UserMfas => Set<UserMfa>();

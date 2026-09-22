@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StudentPortal.Repository.Data;
 
@@ -11,9 +12,11 @@ using StudentPortal.Repository.Data;
 namespace StudentPortal.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921094528_themAnnounceCategory-ThemCategory-ThemroleReceivedColumn3")]
+    partial class themAnnounceCategoryThemCategoryThemroleReceivedColumn3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,32 +24,6 @@ namespace StudentPortal.Repository.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("StudentPortal.Repository.Entities.AccountSequence", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("NEWSEQUENTIALID()");
-
-                    b.Property<string>("AccountType")
-                        .IsRequired()
-                        .HasColumnType("varchar(20)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("NextNumber")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccountType")
-                        .IsUnique()
-                        .HasDatabaseName("UX_AccountSequences_AccountType");
-
-                    b.ToTable("AccountSequences");
-                });
 
             modelBuilder.Entity("StudentPortal.Repository.Entities.Announcement", b =>
                 {
@@ -354,11 +331,11 @@ namespace StudentPortal.Repository.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<string>("StudentCode")
+                        .HasColumnType("varchar(50)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("UserCode")
-                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("UserName")
                         .IsRequired()
@@ -371,17 +348,22 @@ namespace StudentPortal.Repository.Migrations
                         .HasDatabaseName("UX_Users_Email")
                         .HasFilter("[IsDeleted] = 0");
 
+                    b.HasIndex("StudentCode")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Users_StudentCode")
+                        .HasFilter("[IsDeleted] = 0 AND [StudentCode] IS NOT NULL");
+
+                    b.HasIndex("UserName")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Users_UserName")
+                        .HasFilter("[IsDeleted] = 0");
+
                     b.HasIndex("RoleId", "CreatedAt")
                         .IsDescending(false, true)
                         .HasDatabaseName("IX_Users_RoleId_CreatedAt")
                         .HasFilter("[IsDeleted] = 0");
 
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("RoleId", "CreatedAt"), new[] { "Email", "FullName", "UserCode", "LastLoginAt" });
-
-                    b.HasIndex("RoleId", "UserName")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Users_RoleId_UserName")
-                        .HasFilter("[IsDeleted] = 0");
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("RoleId", "CreatedAt"), new[] { "Email", "FullName", "StudentCode", "LastLoginAt" });
 
                     b.ToTable("Users");
                 });

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using StudentPortal.Common.Enums;
 using StudentPortal.Repository.Entities;
 
 namespace StudentPortal.Repository.Data.Configurations;
@@ -13,6 +14,7 @@ public class AnnouncementConfiguration : IEntityTypeConfiguration<Announcement>
         builder.Property(a => a.Summary).HasMaxLength(1000);
         builder.Property(a => a.Content).HasColumnType("nvarchar(max)").IsRequired();
         builder.Property(a => a.IsDeleted).HasDefaultValue(false);
+        builder.Property(a => a.RoleReceived).HasDefaultValue(AnnouncementRoleReceived.All).IsRequired();
 
         // MUST be Restrict for both - two FKs pointing to Users would cause a
         // multiple cascade paths error if left at the default
