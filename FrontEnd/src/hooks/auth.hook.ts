@@ -1,6 +1,11 @@
 import { useState } from "react";
 import authApi from "@/apis/auth.api";
 import type { AuthResponse } from "@/types/auth.type";
+import {
+    setAccessTokenToLocalStorage,
+    setRefreshTokenToLocalStorage,
+    clearLocalStorage,
+} from "@/utils/auth";
 
 export const useAuth = () => {
     const [loading, setLoading] = useState(false);
@@ -19,7 +24,12 @@ export const useAuth = () => {
                 password,
             });
 
-            return response.data;
+            const data = response.data;
+
+            setAccessTokenToLocalStorage(data.data.accessToken);
+            setRefreshTokenToLocalStorage(data.data.refreshToken);
+
+            return data;
         } catch (error) {
             setError(error);
             return null;
@@ -37,6 +47,7 @@ export const useAuth = () => {
         } catch (error) {
             setError(error);
         } finally {
+            clearLocalStorage();
             setLoading(false);
         }
     };

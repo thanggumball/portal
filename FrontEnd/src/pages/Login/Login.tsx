@@ -1,8 +1,11 @@
 import { useAuth } from "@/hooks/auth.hook";
+import path from "@/constants/path";
+import { useNavigate } from "react-router";
 import { useState } from "react";
 
 export default function Login() {
     const { login, loading, error } = useAuth();
+    const navigate = useNavigate();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -14,8 +17,8 @@ export default function Login() {
 
         if (!data) return;
 
-        // login success
-        console.log(data);
+        // Login success → Main
+        navigate(path.home);
     };
 
     return (
@@ -34,7 +37,6 @@ export default function Login() {
             <button disabled={loading}>
                 {loading ? "Đang đăng nhập..." : "Đăng nhập"}
             </button>
-
 
         </form>
     );
