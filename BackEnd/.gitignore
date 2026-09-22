@@ -7,3 +7,9 @@ src/*/Logs/
 src/*/wwwroot/uploads/*
 !src/*/wwwroot/uploads/**/.gitkeep
 database/init_all.sql
+
+
+# ASP.NET Core configuration
+**/appsettings.json
+**/appsettings.*.json
+**/appsettings.Development.json
