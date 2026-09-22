@@ -26,6 +26,8 @@ class Http {
             }
         })
 
+        console.log('🔗 API Base URL:', this.instance.defaults.baseURL)
+
         this.setupRequestInterceptor()
         this.setupResponseInterceptor()
     }
