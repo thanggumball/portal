@@ -1,26 +1,44 @@
-import { createBrowserRouter } from "react-router";
-import path from "../constants/path";
-import MainLayout from "../layouts/MainLayout";
-import { lazy } from "react";
+import { createBrowserRouter } from 'react-router';
+import { lazy } from 'react';
+import path from '../constants/path';
+import MainLayout from '../layouts/MainLayout';
+import ProtectedLayout from '../layouts/ProtectedLayout';
 
-const Home = lazy(() => import('../pages/Home'));
+const Home  = lazy(() => import('../pages/Home'));
 const Login = lazy(() => import('../pages/Login'));
-const AnnounceMent = lazy(() => import('../pages/Announcement'))
+const SignUp = lazy(() => import('../pages/SignUp'));
 
+const AnnouncementPublish = () => <div>Announcement / Publish</div>;
+const AnnouncementManage  = () => <div>Announcement / Manage</div>;
+const UsersManage         = () => <div>Users / Manage</div>;
 
 export const router = createBrowserRouter([
-    {
-        path: path.home,
-        element: <MainLayout />,
+  {
+    element: <MainLayout />,
+    children: [
+      { path: path.home, index: true, element: <Home /> },
+      { path: path.login, element: <Login /> },
+      { path: path.signup, element: <SignUp /> },
+    ],
+  },
+  {
+    element: <ProtectedLayout />,
+    children: [
+      {
+        path: path.announcement.root,
+        handle: { breadcrumb: 'Announcement' },
         children: [
-            {
-                index: true,
-                element: <Home />
-            },
-            {
-                path: path.announcement,
-                element: <AnnounceMent />
-            }
-        ]
-    }
-])
+          { path: path.announcement.publish, handle: { breadcrumb: 'Publish' }, element: <AnnouncementPublish /> },
+          { path: path.announcement.manage,  handle: { breadcrumb: 'Manage'  }, element: <AnnouncementManage  /> },
+        ],
+      },
+      {
+        path: path.users.root,
+        handle: { breadcrumb: 'Users' },
+        children: [
+          { path: path.users.manage, handle: { breadcrumb: 'Manage' }, element: <UsersManage /> },
+        ],
+      },
+    ],
+  },
+]);
