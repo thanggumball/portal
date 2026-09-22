@@ -30,7 +30,7 @@ export default function TablePagination({
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      width: '100%', padding: '1rem 0',
+      width: '100%', padding: '1rem 0 0',
     }}>
       <div style={{ flex: 1, paddingLeft: '0.4rem' }}>
         {`${startItem}-${endItem} of ${totalItem} ${entryName}`}
