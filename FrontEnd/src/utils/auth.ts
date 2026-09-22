@@ -1,3 +1,5 @@
+import { jwtDecode } from "jwt-decode";
+
 const ACCESS_TOKEN_KEY = 'token';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 
@@ -27,4 +29,39 @@ export const getRefreshTokenFromLocalStorage = () => {
 
 export const removeRefreshTokenFromLocalStorage = () => {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+};
+
+type JwtPayload = {
+    sub: string;
+    email: string;
+    role?: string;
+    exp: number;
+    iat?: number;
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"?: string;
+};
+
+export const getCurrentUserFromToken = () => {
+    const token = getAccessTokenFromLocalStorage();
+
+    if (!token) {
+        return null;
+    }
+
+    try {
+        const decoded = jwtDecode<JwtPayload>(token);
+
+        return {
+            id: decoded.sub,
+            email: decoded.email,
+            role:
+                decoded.role ??
+                decoded[
+                    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+                ] ??
+                "",
+            expiresAt: decoded.exp,
+        };
+    } catch {
+        return null;
+    }
 };
