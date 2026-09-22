@@ -9,6 +9,7 @@ using StudentPortal.Service.Helpers;
 using StudentPortal.Service.Interfaces;
 using StudentPortal.Common.Exceptions;
 using System.Runtime.Intrinsics.Arm;
+using Microsoft.Extensions.Logging;
 
 namespace StudentPortal.Service.Implementations;
 
@@ -22,6 +23,7 @@ public class AuthService : IAuthService
     private readonly IJwtTokenHelper _jwtTokenHelper;
     private readonly JwtSettings _jwtSettings;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         IUserRepository userRepository,
@@ -29,6 +31,7 @@ public class AuthService : IAuthService
         IUnitOfWork unitOfWork,
         IRefreshTokenRepository refreshTokenRepository,
         IJwtTokenHelper jwtTokenHelper,
+        ILogger<AuthService> logger,
         JwtSettings jwtSettings)
     {
         _userRepository = userRepository;
@@ -36,6 +39,7 @@ public class AuthService : IAuthService
         _unitOfWork = unitOfWork;
         _refreshTokenRepository = refreshTokenRepository;
         _jwtTokenHelper = jwtTokenHelper;
+        _logger = logger;
         _jwtSettings = jwtSettings;
     }
 
@@ -52,6 +56,7 @@ public class AuthService : IAuthService
                 request.Password,
                 user.PasswordHash))
         {
+            _logger.LogWarning("Login failed for email {Email}", request.Email);
             throw new UnauthorizedAccessException(
                 "Invalid email or password.");
         }

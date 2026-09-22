@@ -1,9 +1,12 @@
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace StudentPortal.API.Middlewares;
 
-public class RequestLoggingMiddleware
+public sealed class RequestLoggingMiddleware
 {
+    private const long SlowRequestMs = 1000;  
+
     private readonly RequestDelegate _next;
     private readonly ILogger<RequestLoggingMiddleware> _logger;
 
@@ -15,23 +18,52 @@ public class RequestLoggingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        if (context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            await _next(context);
+            return;
+        }
+
         var stopwatch = Stopwatch.StartNew();
 
-        // Use OnCompleted instead of logging right after await _next(context): if the request throws,
-        // it jumps straight out to ExceptionHandlingMiddleware (which sits outside) and skips the code
-        // after await. OnCompleted always runs right before the response is sent, even on exceptions.
-        context.Response.OnCompleted(() =>
+        try
+        {
+            await _next(context);
+        }
+        finally
         {
             stopwatch.Stop();
-            _logger.LogInformation(
-                "{Method} {Path} => {StatusCode} ({ElapsedMilliseconds}ms)",
-                context.Request.Method,
-                context.Request.Path,
-                context.Response.StatusCode,
-                stopwatch.ElapsedMilliseconds);
-            return Task.CompletedTask;
-        });
+            Write(context, stopwatch.ElapsedMilliseconds);
+        }
+    }
 
-        await _next(context);
+    private void Write(HttpContext context, long elapsedMs)
+    {
+        var statusCode = context.Response.StatusCode;
+        var isSlow = elapsedMs >= SlowRequestMs;
+
+        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                     ?? context.User.FindFirstValue("sub")
+                     ?? "anonymous";
+
+        var level = statusCode switch
+        {
+            >= 500 => LogLevel.Error,
+            >= 400 => LogLevel.Warning,
+            _ when isSlow => LogLevel.Warning,
+            _ => LogLevel.Information
+        };
+
+        _logger.Log(level,
+            "[{TraceId}] {Method} {Path}{Query} -> {StatusCode} in {ElapsedMs} ms | user={UserId} ip={Ip}{Slow}",
+            context.TraceIdentifier,
+            context.Request.Method,
+            context.Request.Path,
+            context.Request.QueryString,
+            statusCode,
+            elapsedMs,
+            userId,
+            context.Connection.RemoteIpAddress,
+            isSlow ? " SLOW" : string.Empty);
     }
 }
