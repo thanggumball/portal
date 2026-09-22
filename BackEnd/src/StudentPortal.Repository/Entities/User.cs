@@ -8,7 +8,7 @@ public class User : BaseEntity
     public string UserName { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
-    public string? StudentCode { get; set; }
+    public string? UserCode { get; set; }
     public Guid RoleId { get; set; }
     public UserStatus Status { get; set; }
     public DateTime? LastLoginAt { get; set; }

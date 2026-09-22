@@ -1,0 +1,16 @@
+import http from "@/lib/http/http";
+import type { AuthResponse, RefreshTokenResponse } from "@/types/auth.type";
+
+export const URL_AUTH = {
+    LOGIN: '/auth/login',
+    LOGOUT: '/auth/logout',
+    REFRESH_TOKEN: '/auth/refresh-token'
+}
+
+const authApi = {
+    login: (body: { email: string; password: string }) => http.post<AuthResponse>(URL_AUTH.LOGIN, body),
+    logout: () => http.post(URL_AUTH.LOGOUT),
+    refreshToken: () => http.post<RefreshTokenResponse>(URL_AUTH.REFRESH_TOKEN)
+};
+
+export default authApi;
