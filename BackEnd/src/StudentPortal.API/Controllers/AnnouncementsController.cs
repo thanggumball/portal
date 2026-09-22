@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StudentPortal.Common.Constants;
 using StudentPortal.Common.DTOs.Announcement;
+using StudentPortal.Service.Interfaces;
+using System.Security.Claims;
 
 namespace StudentPortal.API.Controllers;
 
@@ -10,9 +12,31 @@ namespace StudentPortal.API.Controllers;
 [Route("api/announcements")]
 public class AnnouncementsController : ControllerBase
 {
+    private readonly IAnnouncementService _announcementService;
+    public AnnouncementsController (IAnnouncementService announcementService)
+    {
+        _announcementService = announcementService;
+    }
     [HttpGet]
-    public Task<IActionResult> Search([FromQuery] AnnouncementFilter filter, CancellationToken ct)
-        => throw new NotImplementedException();
+    [Authorize]
+    public async Task<IActionResult> SearchAsync(
+        [FromQuery] AnnouncementFilter filter,
+        CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _announcementService.SearchAsync(
+            filter,
+            userId,
+            ct);
+
+        return Ok(result);
+    }
 
     [HttpGet("{id:guid}")]
     public Task<IActionResult> GetById(Guid id, CancellationToken ct)

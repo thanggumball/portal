@@ -1,5 +1,6 @@
 using StudentPortal.Common.Enums;
-
+using System.ComponentModel;
+using StudentPortal.Common.DTOs.Category;
 namespace StudentPortal.Common.DTOs.Announcement;
 
 // Used for the list screen - does NOT include Content (heavy columns are not pulled into a list).
@@ -11,4 +12,5 @@ public class AnnouncementResponse
     public AnnouncementStatus Status { get; init; }
     public DateTime? PublishedAt { get; init; }
     public DateTime CreatedAt { get; init; }
+    public List<CategoryResponse> Categories { get; set; } = [];
 }
