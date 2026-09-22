@@ -1,3 +1,4 @@
+using StudentPortal.Common.DTOs.Mail;
 using StudentPortal.Common.DTOs.User;
 using StudentPortal.Common.Enums;
 using StudentPortal.Common.Exceptions;
@@ -18,17 +19,20 @@ public class UserService : IUserService
     private readonly IRoleRepository _roleRepository;
     private readonly IAccountSequenceRepository _accountSequenceRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMailServiceClient _mailServiceClient;
 
     public UserService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IAccountSequenceRepository accountSequenceRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMailServiceClient mailServiceClient)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _accountSequenceRepository = accountSequenceRepository;
         _unitOfWork = unitOfWork;
+        _mailServiceClient = mailServiceClient;
     }
 
     public async Task<UserResponse> CreateUserAsync(
@@ -115,6 +119,16 @@ public class UserService : IUserService
             await _userRepository.AddAsync(user, ct);
 
             await _unitOfWork.SaveChangesAsync(ct);
+
+            await _mailServiceClient.CreateAccountAsync(
+                new CreateMailAccountRequest
+                {
+                    Email = email,
+                    Password = DefaultPassword,
+                    FullName = user.FullName
+                },
+                ct);
+
             await transaction.CommitAsync(ct);
 
             return new UserResponse

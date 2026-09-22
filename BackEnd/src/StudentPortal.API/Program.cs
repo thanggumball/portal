@@ -5,7 +5,10 @@ using StudentPortal.API.Extensions;
 using StudentPortal.API.Middlewares;
 using StudentPortal.Common.DTOs.Shared;
 using StudentPortal.Service;
+using StudentPortal.Service.Implementations;
+using StudentPortal.Service.Interfaces;
 using StudentPortal.Service.Validations.Auth;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +56,13 @@ builder.Services.AddCorsPolicy(
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
+
+builder.Services.AddHttpClient<IMailServiceClient, MailServiceClient>(
+    client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["MailService:BaseUrl"]!);
+    });
 
 var connectionString = builder.Configuration.GetConnectionString(
     "DefaultConnection")
