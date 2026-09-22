@@ -13,14 +13,55 @@ public class AnnouncementRepository : GenericRepository<Announcement>, IAnnounce
     public async Task<(IReadOnlyList<Announcement> Items, int Total)> SearchAsync(
         AnnouncementFilter filter, CancellationToken ct = default)
     {
-        var query = _context.Set<Announcement>().AsNoTracking();
+        var query = _context.Announcements
+            .AsNoTracking()
+            .Where(announcement => !announcement.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(filter.Keyword))
+        {
+            var keyword = filter.Keyword.Trim();
+
+            query = query.Where(announcement =>
+                announcement.Title.Contains(keyword) ||
+                (
+                    announcement.Summary != null &&
+                    announcement.Summary.Contains(keyword)
+                ));
+        }
+
+        if (filter.Status.HasValue)
+        {
+            query = query.Where(announcement =>
+                announcement.Status == filter.Status.Value);
+        }
+
+        if (filter.RoleReceived.HasValue)
+        {
+            query = query.Where(announcement =>
+                announcement.RoleReceived ==
+                filter.RoleReceived.Value);
+        }
+
+        if (filter.CategoryId.HasValue)
+        {
+            query = query.Where(announcement =>
+                announcement.AnnouncementCategory.Any(link =>
+                    link.CategoryId == filter.CategoryId.Value));
+        }
 
         var total = await query.CountAsync(ct);
+
         var items = await query
-            .OrderByDescending(a => a.CreatedAt) 
+            .Include(announcement => announcement.AnnouncementCategory)
+            .ThenInclude(link => link.Category)
+            .OrderByDescending(announcement => announcement.CreatedAt)
+            .ThenBy(announcement => announcement.Id)
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
             .ToListAsync(ct);
 
         return (items, total);
+
     }
 
     public async Task<IEnumerable<Announcement>> GetAnnouncementsAsync(CancellationToken cancellationToken)

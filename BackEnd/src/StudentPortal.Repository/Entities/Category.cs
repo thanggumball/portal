@@ -8,7 +8,7 @@ namespace StudentPortal.Repository.Entities
 {
     public class Category: BaseEntity
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         public ICollection<AnnouncementCategory> AnnouncementCategory { get; set; } = new List<AnnouncementCategory>();
     }

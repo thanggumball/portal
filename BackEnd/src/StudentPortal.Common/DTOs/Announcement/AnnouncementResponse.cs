@@ -11,4 +11,7 @@ public class AnnouncementResponse
     public AnnouncementStatus Status { get; init; }
     public DateTime? PublishedAt { get; init; }
     public DateTime CreatedAt { get; init; }
+    public AnnouncementRoleReceived RoleReceived { get; init; }
+    public DateTime UpdatedAt { get; init; }
+    public List<CategoryResponse> Categories { get; init; } = new();
 }

@@ -7,4 +7,6 @@ public class AnnouncementFilter : PagingRequest
 {
     public AnnouncementStatus? Status { get; set; }
     public string? Keyword { get; set; }
+    public AnnouncementRoleReceived? RoleReceived { get; set; }
+    public Guid? CategoryId { get; set; }
 }

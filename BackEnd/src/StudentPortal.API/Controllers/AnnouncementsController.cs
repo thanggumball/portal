@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StudentPortal.Common.Constants;
 using StudentPortal.Common.DTOs.Announcement;
+using StudentPortal.Common.DTOs.Shared;
+using StudentPortal.Service.Interfaces;
 
 namespace StudentPortal.API.Controllers;
 
@@ -10,10 +12,24 @@ namespace StudentPortal.API.Controllers;
 [Route("api/announcements")]
 public class AnnouncementsController : ControllerBase
 {
+    private readonly IAnnouncementService _announcementService;
+    public AnnouncementsController(
+        IAnnouncementService announcementService)
+    {
+        _announcementService = announcementService;
+    }
+    [Authorize(Roles = RoleConstants.Admin)]
     [HttpGet]
-    public Task<IActionResult> Search([FromQuery] AnnouncementFilter filter, CancellationToken ct)
-        => throw new NotImplementedException();
+    public async Task<IActionResult> Search([FromQuery] AnnouncementFilter filter, CancellationToken ct)
+    {
+        var result = await _announcementService.SearchAsync(
+            filter,
+            ct);
 
+        return Ok(
+            ApiResponse<PagedResult<AnnouncementResponse>>
+                .Ok(result));
+    }
     [HttpGet("{id:guid}")]
     public Task<IActionResult> GetById(Guid id, CancellationToken ct)
         => throw new NotImplementedException();
