@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
-import { Layout, Menu, Breadcrumb, Button } from 'antd';
+import { Layout, Menu, Breadcrumb, Dropdown, Avatar, Switch, Space, theme } from 'antd';
 import type { MenuProps } from 'antd';
-import { Link, Outlet, useLocation, useMatches } from 'react-router';
+import { Link, Outlet, useLocation, useMatches, useNavigate } from 'react-router';
 import path from '../../constants/path';
 import { navConfig } from '../../constants/nav';
 import { isLeaf, type NavItem } from '../../types/sidebar/nav';
+import { useThemeMode } from '../../contexts/ThemeContext';
 
 const { Header, Sider, Content } = Layout;
 const MOCK_USERNAME = 'Some username';
+
+const SIDER_WIDTH = 200;
+const SIDER_COLLAPSED_WIDTH = 80;
 
 type RouteHandle = { breadcrumb?: string };
 
@@ -23,9 +27,11 @@ export default function ProtectedLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const matches = useMatches();
+  const navigate = useNavigate();
+  const { mode, toggle } = useThemeMode();
+  const { token } = theme.useToken();
 
   const menuItems = useMemo(() => toMenuItems(navConfig), []);
-
   const breadcrumbItems = useMemo(
     () =>
       matches
@@ -34,24 +40,100 @@ export default function ProtectedLayout() {
         .map((label) => ({ title: label })),
     [matches]
   );
-
   const defaultOpenKeys = navConfig.filter((i) => !isLeaf(i)).map((i) => i.key);
 
+  const logoWidth = collapsed ? SIDER_COLLAPSED_WIDTH : SIDER_WIDTH;
+
+  const userMenuItems: MenuProps['items'] = [
+    { key: 'profile', label: 'Profile', onClick: () => navigate(path.home) },
+    { type: 'divider' },
+    {
+      key: 'logout',
+      label: <span style={{ color: token.colorError }}>Logout</span>,
+      onClick: () => navigate(path.home),
+    },
+  ];
+
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ display: 'flex', alignItems: 'center', gap: 32, padding: '0 24px', background: '#d9d9d9' }}>
-        <Link to={path.home} style={{ fontSize: 24, fontWeight: 'bold', color: '#000' }}>LOGO</Link>
-        <Breadcrumb items={breadcrumbItems} style={{ flex: 1 }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>{MOCK_USERNAME}</span>
-          <Link to={path.home}><Button type="link">Logout</Button></Link>
+    <Layout style={{ height: '100vh' }}>
+      <Header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: 0,
+          background: token.colorBgContainer,
+          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+        }}
+      >
+        {/* Logo slot — matches sider width, collapses with it */}
+        <div
+          style={{
+            width: logoWidth,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: collapsed ? 16 : 24,
+            fontWeight: 'bold',
+            color: token.colorText,
+            transition: 'width 0.2s',
+          }}
+        >
+          <Link to={path.home} style={{ color: 'inherit' }}>LOGO</Link>
+        </div>
+
+        {/* Content slot — starts where Outlet starts */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 24px',
+          }}
+        >
+          <Breadcrumb items={breadcrumbItems} />
+          <Space size="middle">
+            <Switch
+              checkedChildren="Dark"
+              unCheckedChildren="Light"
+              checked={mode === 'dark'}
+              onChange={toggle}
+            />
+            <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
+              <Avatar
+                style={{ cursor: 'pointer', backgroundColor: token.colorPrimary }}
+              >
+                {MOCK_USERNAME.charAt(0).toUpperCase()}
+              </Avatar>
+            </Dropdown>
+          </Space>
         </div>
       </Header>
+
       <Layout>
-        <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
-          <Menu mode="inline" theme="dark" selectedKeys={[location.pathname]} defaultOpenKeys={defaultOpenKeys} items={menuItems} />
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          width={SIDER_WIDTH}
+          collapsedWidth={SIDER_COLLAPSED_WIDTH}
+        >
+          <Menu
+            mode="inline"
+            theme="dark"
+            selectedKeys={[location.pathname]}
+            defaultOpenKeys={defaultOpenKeys}
+            items={menuItems}
+          />
         </Sider>
-        <Content style={{ padding: 24, background: '#fff' }}>
+        <Content
+          style={{
+            padding: 24,
+            background: token.colorBgLayout,
+            overflow: 'hidden',
+          }}
+        >
           <Outlet />
         </Content>
       </Layout>
