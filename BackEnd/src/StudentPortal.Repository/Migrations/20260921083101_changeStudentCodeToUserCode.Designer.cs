@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StudentPortal.Repository.Data;
 
@@ -11,9 +12,11 @@ using StudentPortal.Repository.Data;
 namespace StudentPortal.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921083101_changeStudentCodeToUserCode")]
+    partial class changeStudentCodeToUserCode
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -26,8 +29,7 @@ namespace StudentPortal.Repository.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AccountType")
                         .IsRequired()
@@ -317,17 +319,17 @@ namespace StudentPortal.Repository.Migrations
                         .HasDatabaseName("UX_Users_Email")
                         .HasFilter("[IsDeleted] = 0");
 
+                    b.HasIndex("UserName")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Users_UserName")
+                        .HasFilter("[IsDeleted] = 0");
+
                     b.HasIndex("RoleId", "CreatedAt")
                         .IsDescending(false, true)
                         .HasDatabaseName("IX_Users_RoleId_CreatedAt")
                         .HasFilter("[IsDeleted] = 0");
 
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("RoleId", "CreatedAt"), new[] { "Email", "FullName", "UserCode", "LastLoginAt" });
-
-                    b.HasIndex("RoleId", "UserName")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Users_RoleId_UserName")
-                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Users");
                 });
