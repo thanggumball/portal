@@ -4,6 +4,7 @@ using StudentPortal.Common.Exceptions;
 using StudentPortal.Repository.Entities;
 using StudentPortal.Repository.Interfaces;
 using StudentPortal.Service.Interfaces;
+using StudentPortal.Service.Mappers;
 
 namespace StudentPortal.Service.Implementations;
 
@@ -135,5 +136,59 @@ public class UserService : IUserService
             await transaction.RollbackAsync(ct);
             throw;
         }
+    }
+
+    public async Task<UserResponse> UpdateUserAsync(
+        Guid userId,
+        UpdateUserRequest request,
+        CancellationToken ct = default)
+    {
+        var user = await _userRepository.GetByIdAsync(userId, ct);
+
+        if (user is null || user.IsDeleted)
+        {
+            throw new NotFoundException("User not found.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            throw new BadRequestException("Full name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.RoleName))
+        {
+            throw new BadRequestException("Role is required.");
+        }
+
+        var roleName = request.RoleName.Trim();
+
+        if (roleName != StaffRole && roleName != StudentRole)
+        {
+            throw new BadRequestException(
+                "Role must be either Staff or Student.");
+        }
+
+        var role = await _roleRepository.FindByNameAsync(
+            roleName,
+            ct);
+
+        if (role is null)
+        {
+            throw new NotFoundException(
+                $"Role '{roleName}' was not found.");
+        }
+
+        user.FullName = request.FullName.Trim();
+        user.RoleId = role.Id;
+        user.Role = role;
+        user.Status = request.Status;
+        user.AvatarUrl = request.AvatarUrl;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        _userRepository.Update(user);
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return UserMapper.ToResponse(user);
     }
 }
