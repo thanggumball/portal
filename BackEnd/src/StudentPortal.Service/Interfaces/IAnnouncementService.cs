@@ -7,7 +7,7 @@ public interface IAnnouncementService
 {
     Task<PagedResult<AnnouncementResponse>> SearchAsync(
         AnnouncementFilter filter,
-        Guid userId,
+        Guid? userId,
         CancellationToken ct = default);
 
     Task<AnnouncementDetailResponse> GetByIdAsync(
