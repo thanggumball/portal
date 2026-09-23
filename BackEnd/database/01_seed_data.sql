@@ -174,7 +174,7 @@ BEGIN
         SYSUTCDATETIME()
     );
 END;
-<<<<<<< HEAD
+
 IF NOT EXISTS (
 SELECT 1
 FROM [Announcements]
@@ -283,8 +283,4 @@ VALUES
 );
 END;
 
-=======
 
-SELECT *
-FROM [AccountSequences];
->>>>>>> dev
