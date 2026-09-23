@@ -28,7 +28,8 @@ public class AnnouncementCategoryConfiguration
             ac.AnnouncementId,
             ac.CategoryId
         }).IsUnique();
-
+        builder.Property(x => x.CreatedAt)
+            .HasDefaultValueSql("GETDATE()");
         builder.ToTable("AnnouncementCategory");
     }
 }
