@@ -53,7 +53,9 @@ public class UsersController : ControllerBase
     {
         var result = await _userService.UpdateUserAsync(id, request, ct);
 
-        return Ok(result);
+        return StatusCode(
+            StatusCodes.Status201Created,
+            ApiResponse<UserResponse>.Ok(result));
     }
 
     [HttpPatch("{id:guid}/status")]

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using StudentPortal.API.Extensions;
 using StudentPortal.API.Middlewares;
 using StudentPortal.Common.DTOs.Shared;
+using StudentPortal.Repository.Interfaces;
+using StudentPortal.Repository.Implementations;
 using StudentPortal.Service;
 using StudentPortal.Service.Implementations;
 using StudentPortal.Service.Interfaces;
@@ -56,6 +58,7 @@ builder.Services.AddCorsPolicy(
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
+
 
 builder.Services.AddHttpClient<IMailServiceClient, MailServiceClient>(
     client =>

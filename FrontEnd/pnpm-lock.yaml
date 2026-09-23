@@ -14,6 +14,9 @@ importers:
       axios:
         specifier: ^1.20.0
         version: 1.20.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
+      dayjs:
+        specifier: ^1.11.23
+        version: 1.11.23
       jwt-decode:
         specifier: ^4.0.0
         version: 4.0.0
