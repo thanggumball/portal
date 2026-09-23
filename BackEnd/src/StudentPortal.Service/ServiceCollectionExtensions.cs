@@ -21,11 +21,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailWhitelistService, EmailWhitelistService>();
         services.AddScoped<IJwtTokenHelper, JwtTokenHelper>();
-<<<<<<< HEAD
         services.AddScoped<IAuditLogService, AuditLogService>();
-=======
         services.AddScoped<IProfileService, ProfileService>();
->>>>>>> 618c8528049b691a41dfd66fbf58e4dedcf4c8d6
 
         return services;
     }
