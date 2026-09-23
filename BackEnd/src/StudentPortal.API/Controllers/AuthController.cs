@@ -48,4 +48,16 @@ public class AuthController : ControllerBase
         await _authService.ChangePasswordAsync(userId, request, ct);
         return NoContent();
     }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+    ForgotPasswordRequest request,
+    CancellationToken ct)
+    {
+        await _authService.ForgotPasswordAsync(request, ct);
+
+        return Ok(ApiResponse<object?>.Ok(
+            null,
+            "A temporary password has been sent to your MailService inbox."));
+    }
 }

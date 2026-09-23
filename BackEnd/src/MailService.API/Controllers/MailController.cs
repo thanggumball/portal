@@ -106,5 +106,18 @@ public class MailController : ControllerBase
             });
         }
     }
+
+    [AllowAnonymous]
+    [HttpPost("internal/send")]
+    public async Task<IActionResult> SendInternal(
+    InternalSendMailRequest request,
+    CancellationToken ct)
+    {
+        var result = await _mailService.SendInternalAsync(
+            request,
+            ct);
+
+        return Ok(result);
+    }
 }
 

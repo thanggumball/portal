@@ -36,8 +36,8 @@ public class UserService : IUserService
     }
 
     public async Task<UserResponse> CreateUserAsync(
-        CreateUserRequest request,
-        CancellationToken ct = default)
+    CreateUserRequest request,
+    CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(request.FullName))
         {
@@ -67,89 +67,127 @@ public class UserService : IUserService
                 $"Role '{roleName}' was not found.");
         }
 
-        await using var transaction =
-            await _unitOfWork.BeginTransactionAsync(ct);
+        const int maxAttempts = 100000;
 
-        try
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            var sequence = await _accountSequenceRepository
-                .GetForUpdateAsync(roleName, ct);
+            await using var transaction =
+                await _unitOfWork.BeginTransactionAsync(ct);
 
-            if (sequence is null)
+            try
             {
-                throw new InvalidOperationException(
-                    $"Account sequence for role '{roleName}' was not found.");
-            }
+                var sequence = await _accountSequenceRepository
+                    .GetForUpdateAsync(roleName, ct);
 
-            var userCode = sequence.NextNumber.ToString();
+                if (sequence is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Account sequence for role '{roleName}' was not found.");
+                }
 
-            var domain = roleName == StaffRole
-                ? "staff.avepoint.com"
-                : "student.avepoint.com";
+                var userCode = sequence.NextNumber.ToString();
 
-            var email = $"{userCode}@{domain}";
+                var domain = roleName == StaffRole
+                    ? "staff.avepoint.com"
+                    : "student.avepoint.com";
 
-            if (await _userRepository.ExistsByEmailAsync(email, ct))
-            {
-                throw new ConflictException(
-                    $"An account with email '{email}' already exists.");
-            }
+                var email = $"{userCode}@{domain}";
 
-            sequence.NextNumber++;
+                if (await _userRepository.ExistsByEmailAsync(email, ct))
+                {
+                    sequence.NextNumber++;
 
-            var now = DateTime.UtcNow;
+                    _accountSequenceRepository.Update(sequence);
 
-            var user = new User
-            {
-                Email = email,
-                UserName = userCode,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(
-                    DefaultPassword),
-                FullName = request.FullName.Trim(),
-                UserCode = userCode,
-                RoleId = role.Id,
-                Role = role,
-                Status = UserStatus.Active,
-                IsDeleted = false,
-                CreatedAt = now,
-                UpdatedAt = now
-            };
+                    await _unitOfWork.SaveChangesAsync(ct);
+                    await transaction.CommitAsync(ct);
 
-            _accountSequenceRepository.Update(sequence);
-            await _userRepository.AddAsync(user, ct);
+                    continue;
+                }
 
-            await _unitOfWork.SaveChangesAsync(ct);
+                sequence.NextNumber++;
 
-            await _mailServiceClient.CreateAccountAsync(
-                new CreateMailAccountRequest
+                var now = DateTime.UtcNow;
+
+                var user = new User
                 {
                     Email = email,
-                    Password = DefaultPassword,
-                    FullName = user.FullName
-                },
-                ct);
+                    UserName = userCode,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+                        DefaultPassword),
+                    FullName = request.FullName.Trim(),
+                    UserCode = userCode,
+                    RoleId = role.Id,
+                    Role = role,
+                    Status = UserStatus.Active,
+                    IsDeleted = false,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
 
-            await transaction.CommitAsync(ct);
+                _accountSequenceRepository.Update(sequence);
+                await _userRepository.AddAsync(user, ct);
 
-            return new UserResponse
+                await _unitOfWork.SaveChangesAsync(ct);
+
+                try
+                {
+                    await _mailServiceClient.CreateAccountAsync(
+                        new CreateMailAccountRequest
+                        {
+                            Email = email,
+                            Password = DefaultPassword,
+                            FullName = user.FullName
+                        },
+                        ct);
+                }
+                catch (InvalidOperationException ex)
+                    when (ex.Message == "Mail account already exists.")
+                {
+                    // The MailService account already exists,
+                    // so keep the consumed sequence number
+                    // and retry with the next number.
+                    await transaction.CommitAsync(ct);
+
+                    if (attempt == maxAttempts)
+                    {
+                        throw new ConflictException(
+                            "Unable to generate a unique account number " +
+                            "after multiple attempts.");
+                    }
+
+                    continue;
+                }
+
+                await transaction.CommitAsync(ct);
+
+                return new UserResponse
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    UserName = user.UserName,
+                    FullName = user.FullName,
+                    UserCode = user.UserCode,
+                    RoleName = role.Name,
+                    Status = user.Status,
+                    AvatarUrl = user.AvatarUrl,
+                    LastLoginAt = user.LastLoginAt,
+                    CreatedAt = user.CreatedAt
+                };
+            }
+            catch (ConflictException)
             {
-                Id = user.Id,
-                Email = user.Email,
-                UserName = user.UserName,
-                FullName = user.FullName,
-                UserCode = user.UserCode,
-                RoleName = role.Name,
-                Status = user.Status,
-                AvatarUrl = user.AvatarUrl,
-                LastLoginAt = user.LastLoginAt,
-                CreatedAt = user.CreatedAt
-            };
+                throw;
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
         }
-        catch
-        {
-            await transaction.RollbackAsync(ct);
-            throw;
-        }
+
+        throw new ConflictException(
+            "Unable to generate a unique account number.");
     }
 
     public async Task<UserResponse> UpdateUserAsync(

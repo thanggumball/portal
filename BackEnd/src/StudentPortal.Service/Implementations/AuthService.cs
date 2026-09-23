@@ -1,21 +1,24 @@
 using System.Security.Cryptography;
 using StudentPortal.Common.DTOs.Auth;
+using StudentPortal.Common.DTOs.Mail;
 using StudentPortal.Common.DTOs.User;
 using StudentPortal.Common.Enums;
+using StudentPortal.Common.Exceptions;
 using StudentPortal.Common.Settings;
 using StudentPortal.Repository.Entities;
 using StudentPortal.Repository.Interfaces;
 using StudentPortal.Service.Helpers;
 using StudentPortal.Service.Interfaces;
-using StudentPortal.Common.Exceptions;
-using System.Runtime.Intrinsics.Arm;
+
 
 namespace StudentPortal.Service.Implementations;
 
 public class AuthService : IAuthService
 {
     private const string DefaultStudentRole = "Student";
+    private readonly HttpClient _httpClient;
 
+    private readonly IMailServiceClient _mailServiceClient;
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -24,12 +27,13 @@ public class AuthService : IAuthService
     private readonly IRefreshTokenRepository _refreshTokenRepository;
 
     public AuthService(
-        IUserRepository userRepository,
-        IRoleRepository roleRepository,
-        IUnitOfWork unitOfWork,
-        IRefreshTokenRepository refreshTokenRepository,
-        IJwtTokenHelper jwtTokenHelper,
-        JwtSettings jwtSettings)
+    IUserRepository userRepository,
+    IRoleRepository roleRepository,
+    IUnitOfWork unitOfWork,
+    IRefreshTokenRepository refreshTokenRepository,
+    IJwtTokenHelper jwtTokenHelper,
+    JwtSettings jwtSettings,
+    IMailServiceClient mailServiceClient)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
@@ -37,6 +41,7 @@ public class AuthService : IAuthService
         _refreshTokenRepository = refreshTokenRepository;
         _jwtTokenHelper = jwtTokenHelper;
         _jwtSettings = jwtSettings;
+        _mailServiceClient = mailServiceClient;
     }
 
     public async Task<LoginResponse> LoginAsync(
@@ -238,5 +243,61 @@ public class AuthService : IAuthService
         _userRepository.Update(user);
 
         await _unitOfWork.SaveChangesAsync(ct);
+    }
+
+    public async Task ForgotPasswordAsync(
+    ForgotPasswordRequest request,
+    CancellationToken ct = default)
+    {
+        var user = await _userRepository.GetForLoginAsync(
+            request.Email,
+            ct);
+
+        if (user is null ||
+            user.IsDeleted ||
+            user.Status != UserStatus.Active)
+        {
+            throw new NotFoundException(
+                "User with this email was not found.");
+        }
+
+        var temporaryPassword =
+            Convert.ToBase64String(
+                RandomNumberGenerator.GetBytes(9));
+
+        await using var transaction =
+            await _unitOfWork.BeginTransactionAsync(ct);
+
+        try
+        {
+            await _mailServiceClient.SendMailAsync(
+                new SendMailRequest
+                {
+                    To = user.Email,
+                    Subject = "Student Portal - Password Reset",
+                    Body =
+                        $"Hello {user.FullName},\n\n" +
+                        "Your Student Portal temporary password is:\n\n" +
+                        $"{temporaryPassword}\n\n" +
+                        "Please use this password to log in to Student Portal.",
+                    IsHtml = false
+                },
+                ct);
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+                temporaryPassword);
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            _userRepository.Update(user);
+
+            await _unitOfWork.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 }
