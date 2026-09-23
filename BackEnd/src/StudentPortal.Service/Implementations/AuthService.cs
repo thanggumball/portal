@@ -21,6 +21,8 @@ public class AuthService : IAuthService
     private readonly IMailServiceClient _mailServiceClient;
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
+    private readonly IEmailWhitelistRepository _emailWhitelistRepository;
+
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtTokenHelper _jwtTokenHelper;
     private readonly JwtSettings _jwtSettings;
@@ -29,6 +31,7 @@ public class AuthService : IAuthService
     public AuthService(
     IUserRepository userRepository,
     IRoleRepository roleRepository,
+    IEmailWhitelistRepository emailWhitelistRepository,
     IUnitOfWork unitOfWork,
     IRefreshTokenRepository refreshTokenRepository,
     IJwtTokenHelper jwtTokenHelper,
@@ -37,6 +40,7 @@ public class AuthService : IAuthService
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
+        _emailWhitelistRepository = emailWhitelistRepository;
         _unitOfWork = unitOfWork;
         _refreshTokenRepository = refreshTokenRepository;
         _jwtTokenHelper = jwtTokenHelper;
@@ -300,4 +304,94 @@ public class AuthService : IAuthService
             throw;
         }
     }
+
+    public async Task SelfRegisterAsync(
+    SelfRegisterRequest request,
+    CancellationToken ct = default)
+{
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        throw new BadRequestException("Email is required.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.FullName))
+    {
+        throw new BadRequestException("Full name is required.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Password))
+    {
+        throw new BadRequestException("Password is required.");
+    }
+
+    var email = request.Email.Trim().ToLowerInvariant();
+    var fullName = request.FullName.Trim();
+
+    var existingUser = await _userRepository
+        .ExistsByEmailAsync(email, ct);
+
+    if (existingUser)
+    {
+        throw new BadRequestException(
+            "An account with this email already exists.");
+    }
+
+    var whitelist = await _emailWhitelistRepository
+        .GetAvailableByEmailAsync(email, ct);
+
+    if (whitelist is null)
+    {
+        throw new BadRequestException(
+            "This email is not whitelisted or has already been used.");
+    }
+
+    await using var transaction =
+        await _unitOfWork.BeginTransactionAsync(ct);
+
+    try
+    {
+        var user = new User
+        {
+            Email = email,
+            UserName = email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+                request.Password),
+            FullName = fullName,
+            UserCode = null,
+            RoleId = whitelist.RoleId,
+            Role = whitelist.Role,
+            Status = UserStatus.Active,
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await _userRepository.AddAsync(user, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        await _mailServiceClient.CreateAccountAsync(
+            new CreateMailAccountRequest
+            {
+                Email = email,
+                Password = request.Password,
+                FullName = fullName
+            },
+            ct);
+
+        whitelist.IsUsed = true;
+        whitelist.UsedAt = DateTime.UtcNow;
+        whitelist.UpdatedAt = DateTime.UtcNow;
+
+        _emailWhitelistRepository.Update(whitelist);
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        await transaction.CommitAsync(ct);
+    }
+    catch
+    {
+        await transaction.RollbackAsync(ct);
+        throw;
+    }
+}
 }

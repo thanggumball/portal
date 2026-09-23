@@ -60,4 +60,20 @@ public class AuthController : ControllerBase
             null,
             "A temporary password has been sent to your MailService inbox."));
     }
+
+    [HttpPost("self-register")]
+    public async Task<IActionResult> SelfRegister(
+        SelfRegisterRequest request,
+        CancellationToken ct)
+    {
+        await _authService.SelfRegisterAsync(
+            request,
+            ct);
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            ApiResponse<object?>.Ok(
+                null,
+                "Account registered successfully."));
+    }
 }
