@@ -1,6 +1,10 @@
-
 import type { AppContextInterface } from '@/types/common/app-context.type'
-import { clearLocalStorage, getAccessTokenFromLocalStorage, LocalStorageEventTarget } from '@/utils/auth'
+import { useUser } from '@/hooks/user.hook'
+import {
+    clearLocalStorage,
+    getAccessTokenFromLocalStorage,
+    LocalStorageEventTarget
+} from '@/utils/auth'
 import {
     createContext,
     useEffect,
@@ -9,7 +13,10 @@ import {
 } from 'react'
 
 const initialAppContext: AppContextInterface = {
-    isAuthenticated: Boolean(getAccessTokenFromLocalStorage()),
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+    setUser: () => { },
     setIsAuthenticated: () => { },
     resetAuth: () => { }
 }
@@ -18,31 +25,80 @@ export const AppContext =
     createContext<AppContextInterface>(initialAppContext)
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(
-        initialAppContext.isAuthenticated
-    )
+    const [user, setUser] = useState<AppContextInterface['user']>(null)
+
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+    const [isLoading, setIsLoading] = useState(true)
+
+    const { getMe } = useUser()
 
     const resetAuth = () => {
         clearLocalStorage()
+
+        setUser(null)
         setIsAuthenticated(false)
     }
 
+    // ================= INIT AUTH =================
+
+    useEffect(() => {
+        const initAuth = async () => {
+            const accessToken = getAccessTokenFromLocalStorage()
+
+            // Không có token → chưa login
+            if (!accessToken) {
+                setIsLoading(false)
+                return
+            }
+
+            try {
+                const user = await getMe()
+
+                if (!user) {
+                    setUser(null)
+                    setIsAuthenticated(false)
+                    return
+                }
+
+                setUser(user)
+                setIsAuthenticated(true)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        initAuth()
+    }, [])
+
+    // ================= CLEAR AUTH =================
+
     useEffect(() => {
         const handleClearLS = () => {
+            setUser(null)
             setIsAuthenticated(false)
         }
 
-        LocalStorageEventTarget.addEventListener('clearLS', handleClearLS)
+        LocalStorageEventTarget.addEventListener(
+            'clearLS',
+            handleClearLS
+        )
 
         return () => {
-            LocalStorageEventTarget.removeEventListener('clearLS', handleClearLS)
+            LocalStorageEventTarget.removeEventListener(
+                'clearLS',
+                handleClearLS
+            )
         }
     }, [])
 
     return (
         <AppContext.Provider
             value={{
+                user,
                 isAuthenticated,
+                isLoading,
+                setUser,
                 setIsAuthenticated,
                 resetAuth
             }}
