@@ -12,7 +12,7 @@ public interface IAnnouncementService
 
     Task<AnnouncementDetailResponse> GetByIdAsync(
         Guid id,
-        Guid userId,
+        Guid? userId,
         CancellationToken ct = default);
 
     Task<AnnouncementDetailResponse> CreateAsync(

@@ -22,7 +22,8 @@ public class AnnouncementConfiguration : IEntityTypeConfiguration<Announcement>
                .HasForeignKey(a => a.CreatedBy).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(a => a.Updater).WithMany()
                .HasForeignKey(a => a.UpdatedBy).OnDelete(DeleteBehavior.Restrict);
-
+        builder.Property(x => x.CreatedAt)
+            .HasDefaultValueSql("GETDATE()");
         builder.HasIndex(a => new { a.Status, a.PublishedAt })
                .IsDescending(false, true)
                .IncludeProperties(a => new { a.Title, a.Summary })
