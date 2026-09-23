@@ -1,4 +1,4 @@
-﻿-- ============================================================
+﻿﻿-- ============================================================
 --  01_seed_data.sql - initial data, hand-written
 --  Run after dotnet ef database update
 --
@@ -175,10 +175,6 @@ BEGIN
     );
 END;
 <<<<<<< HEAD
-
-SELECT *
-FROM [AccountSequences];
-=======
 IF NOT EXISTS (
 SELECT 1
 FROM [Announcements]
@@ -287,4 +283,8 @@ VALUES
 );
 END;
 
->>>>>>> 23cd1cbad7abd9bfead1818773e5770271fa8e83
+=======
+
+SELECT *
+FROM [AccountSequences];
+>>>>>>> dev
