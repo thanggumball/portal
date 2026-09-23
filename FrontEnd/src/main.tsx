@@ -5,6 +5,7 @@ import { ConfigProvider, theme } from 'antd';
 import { router } from './routes/router';
 import { ThemeProvider, useThemeMode } from './contexts/ThemeContext';
 import './index.css';
+import { AppProvider } from './contexts/AppContext';
 
 function ThemedApp() {
   const { mode } = useThemeMode();
@@ -23,8 +24,10 @@ function ThemedApp() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
-      <ThemedApp />
-    </ThemeProvider>
+    <AppProvider>
+      <ThemeProvider>
+        <ThemedApp />
+      </ThemeProvider>
+    </AppProvider>
   </StrictMode>
 );
