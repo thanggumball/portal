@@ -59,9 +59,6 @@ builder.Services.AddCorsPolicy(
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 
-builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
-builder.Services.AddScoped<IProfileService, ProfileService>();
-
 
 builder.Services.AddHttpClient<IMailServiceClient, MailServiceClient>(
     client =>
