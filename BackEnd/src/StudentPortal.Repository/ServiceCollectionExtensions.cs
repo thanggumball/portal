@@ -12,7 +12,6 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddRepositoryLayer(this IServiceCollection services, string connectionString)
     {
-        services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
         services.AddDbContext<AppDbContext>(options => options
            .UseSqlServer(connectionString)
            // Built NEW inside the lambda: one interceptor per DbContext, because the
