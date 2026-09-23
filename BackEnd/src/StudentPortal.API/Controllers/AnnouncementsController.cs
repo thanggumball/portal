@@ -41,26 +41,14 @@ public class AnnouncementsController : ControllerBase
 
         return Ok(result);
     }
+
     [AllowAnonymous]
     [HttpGet("{id:guid}")]
-<<<<<<< HEAD
-    public Task<IActionResult> GetById(Guid id, CancellationToken ct)
-        => throw new NotImplementedException();
-
-    [Authorize(Roles = RoleConstants.Admin)]
-    [HttpPost]
-    public async Task<IActionResult> Create(
-        CreateAnnouncementRequest request,
+    public async Task<IActionResult> GetByIdAsync(
+        Guid id,
         CancellationToken ct)
     {
-        var currentUserId = GetCurrentUserId();
-=======
-    public async Task<IActionResult> GetByIdAsync(
-    Guid id,
-    CancellationToken ct)
-    {
         Guid? userId = null;
->>>>>>> 23cd1cbad7abd9bfead1818773e5770271fa8e83
 
         var userIdClaim =
             User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -76,6 +64,25 @@ public class AnnouncementsController : ControllerBase
             ct);
 
         return Ok(result);
+    }
+
+    [Authorize(Roles = RoleConstants.Admin)]
+    [HttpPost]
+    public async Task<IActionResult> Create(
+        CreateAnnouncementRequest request,
+        CancellationToken ct)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        var result = await _announcementService.CreateAsync(
+            currentUserId,
+            request,
+            ct);
+
+        return CreatedAtAction(
+            nameof(GetByIdAsync),
+            new { id = result.Id },
+            ApiResponse<AnnouncementDetailResponse>.Ok(result));
     }
 
     [Authorize(Roles = RoleConstants.Admin)]
