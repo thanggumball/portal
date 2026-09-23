@@ -1,5 +1,5 @@
 import type { AppContextInterface } from '@/types/common/app-context.type'
-import { useUser } from '@/hooks/user.hook'
+import { useUsers } from '@/hooks/user.hook'
 import {
     clearLocalStorage,
     getAccessTokenFromLocalStorage,
@@ -31,7 +31,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const [isLoading, setIsLoading] = useState(true)
 
-    const { getMe } = useUser()
+    const { getMe } = useUsers()
 
     const resetAuth = () => {
         clearLocalStorage()

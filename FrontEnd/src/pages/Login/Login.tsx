@@ -1,12 +1,12 @@
 import { useAuth } from '@/hooks/auth.hook'
 import { useContext, useState } from 'react'
 import { AppContext } from '@/contexts/AppContext'
-import { useUser } from '@/hooks/user.hook'
+import { useUsers } from '@/hooks/user.hook'
 
 export default function Login() {
     const { login, loading } = useAuth()
     const { setIsAuthenticated, setUser } = useContext(AppContext)
-    const { getMe } = useUser()
+    const { getMe } = useUsers()
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
