@@ -1,4 +1,5 @@
 using StudentPortal.Common.Enums;
+using StudentPortal.Common.DTOs.Category;
 
 namespace StudentPortal.Common.DTOs.Announcement;
 
@@ -11,4 +12,5 @@ public class AnnouncementResponse
     public AnnouncementStatus Status { get; init; }
     public DateTime? PublishedAt { get; init; }
     public DateTime CreatedAt { get; init; }
+    public List<CategoryResponse> Categories { get; set; } = [];
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StudentPortal.Repository.Data;
 
@@ -11,9 +12,11 @@ using StudentPortal.Repository.Data;
 namespace StudentPortal.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923073557_AddDefaultValueForcreateAt-inAnnoucenment-Categories-AC")]
+    partial class AddDefaultValueForcreateAtinAnnoucenmentCategoriesAC
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -227,40 +230,27 @@ namespace StudentPortal.Repository.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Email")
+                    b.Property<string>("Domain")
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
-                    b.Property<bool>("IsUsed")
+                    b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
-                        .HasDefaultValue(false);
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("UsedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedBy");
-
-                    b.HasIndex("Email")
+                    b.HasIndex("Domain")
                         .IsUnique()
-                        .HasDatabaseName("UX_EmailWhitelists_Email");
-
-                    b.HasIndex("RoleId");
+                        .HasDatabaseName("UX_EmailWhitelists_Domain");
 
                     b.ToTable("EmailWhitelists");
                 });
@@ -487,25 +477,6 @@ namespace StudentPortal.Repository.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("StudentPortal.Repository.Entities.EmailWhitelist", b =>
-                {
-                    b.HasOne("StudentPortal.Repository.Entities.User", "Creator")
-                        .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("StudentPortal.Repository.Entities.Role", "Role")
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Creator");
-
-                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("StudentPortal.Repository.Entities.RefreshToken", b =>
