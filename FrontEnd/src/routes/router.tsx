@@ -19,6 +19,7 @@ export const router = createBrowserRouter([
   {
     element: <MainLayout />,
     children: [
+<<<<<<< HEAD
       {
         element: <RejectedRoute />,
         children: [
@@ -33,6 +34,13 @@ export const router = createBrowserRouter([
         ]
       }
     ]
+=======
+      { path: path.home, index: true, element: <Home /> },
+      { path: path.login, element: <Login /> },
+      { path: path.signup, element: <SignUp /> },
+      { }
+    ],
+>>>>>>> 23cd1cbad7abd9bfead1818773e5770271fa8e83
   },
 
 

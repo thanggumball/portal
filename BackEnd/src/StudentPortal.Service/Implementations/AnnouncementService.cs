@@ -35,25 +35,34 @@ public class AnnouncementService : IAnnouncementService
     // Andrew: Get List
     public async Task<PagedResult<AnnouncementResponse>> SearchAsync(
         AnnouncementFilter filterRequest,
-        Guid userId,
+        Guid? userId,
         CancellationToken ct = default)
     {
-        var user = await _userRepository.GetByIdWithRoleAsync(
-            userId,
-            ct);
+        AnnouncementRoleReceived userRole;
 
-        if (user is null)
+        if (!userId.HasValue)
         {
-            throw new NotFoundException("User not found.");
+            userRole = AnnouncementRoleReceived.All;
         }
-
-        if (user.Role is null)
+        else
         {
-            throw new ForbiddenException(
-                "The user has not been assigned a role.");
-        }
+            var user = await _userRepository.GetByIdWithRoleAsync(
+                userId.Value,
+                ct);
 
-        var userRole = MapUserRole(user.Role.Name);
+            if (user is null)
+            {
+                throw new NotFoundException("User not found.");
+            }
+
+            if (user.Role is null)
+            {
+                throw new ForbiddenException(
+                    "The user has not been assigned a role.");
+            }
+
+            userRole = MapUserRole(user.Role.Name);
+        }
 
         var (items, total) =
             await _announcementRepository.SearchAsync(
@@ -76,25 +85,35 @@ public class AnnouncementService : IAnnouncementService
     // Andrew: Get Detail
     public async Task<AnnouncementDetailResponse> GetByIdAsync(
         Guid announcementId,
-        Guid userId,
+        Guid? userId,
         CancellationToken ct = default)
     {
-        var user = await _userRepository.GetByIdWithRoleAsync(
-            userId,
-            ct);
+        AnnouncementRoleReceived userRole;
 
-        if (user is null)
+        if (!userId.HasValue)
         {
-            throw new NotFoundException("User not found.");
+            userRole = AnnouncementRoleReceived.All;
+        }
+        else
+        {
+            var user = await _userRepository.GetByIdWithRoleAsync(
+                userId.Value,
+                ct);
+
+            if (user is null)
+            {
+                throw new NotFoundException("User not found.");
+            }
+
+            if (user.Role is null)
+            {
+                throw new ForbiddenException(
+                    "The user has not been assigned a role.");
+            }
+
+            userRole = MapUserRole(user.Role.Name);
         }
 
-        if (user.Role is null)
-        {
-            throw new ForbiddenException(
-                "The user has not been assigned a role.");
-        }
-
-        var userRole = MapUserRole(user.Role.Name);
 
         var announcement =
             await _announcementRepository

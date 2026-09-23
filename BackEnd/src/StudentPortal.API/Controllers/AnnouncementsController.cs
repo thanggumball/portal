@@ -14,21 +14,24 @@ namespace StudentPortal.API.Controllers;
 public class AnnouncementsController : ControllerBase
 {
     private readonly IAnnouncementService _announcementService;
-    public AnnouncementsController (IAnnouncementService announcementService)
+    public AnnouncementsController(IAnnouncementService announcementService)
     {
         _announcementService = announcementService;
     }
+    [AllowAnonymous]
     [HttpGet]
-    [Authorize]
     public async Task<IActionResult> SearchAsync(
         [FromQuery] AnnouncementFilter filter,
         CancellationToken ct)
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        Guid? userId = null;
 
-        if (!Guid.TryParse(userIdClaim, out var userId))
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (Guid.TryParse(userIdClaim, out var parsedUserId))
         {
-            return Unauthorized();
+            userId = parsedUserId;
         }
 
         var result = await _announcementService.SearchAsync(
@@ -38,7 +41,9 @@ public class AnnouncementsController : ControllerBase
 
         return Ok(result);
     }
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
+<<<<<<< HEAD
     public Task<IActionResult> GetById(Guid id, CancellationToken ct)
         => throw new NotImplementedException();
 
@@ -49,16 +54,28 @@ public class AnnouncementsController : ControllerBase
         CancellationToken ct)
     {
         var currentUserId = GetCurrentUserId();
+=======
+    public async Task<IActionResult> GetByIdAsync(
+    Guid id,
+    CancellationToken ct)
+    {
+        Guid? userId = null;
+>>>>>>> 23cd1cbad7abd9bfead1818773e5770271fa8e83
 
-        var result = await _announcementService.CreateAsync(
-            currentUserId,
-            request,
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (Guid.TryParse(userIdClaim, out var parsedUserId))
+        {
+            userId = parsedUserId;
+        }
+
+        var result = await _announcementService.GetByIdAsync(
+            id,
+            userId,
             ct);
 
-        return CreatedAtAction(
-            nameof(GetById),
-            new { id = result.Id },
-            ApiResponse<AnnouncementDetailResponse>.Ok(result));
+        return Ok(result);
     }
 
     [Authorize(Roles = RoleConstants.Admin)]

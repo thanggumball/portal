@@ -22,7 +22,8 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.HasMany(c => c.AnnouncementCategory)
             .WithOne(ac => ac.Category)
             .HasForeignKey(ac => ac.CategoryId);
-
+        builder.Property(x => x.CreatedAt)
+    .HasDefaultValueSql("GETDATE()");
         builder.ToTable("Categories");
     }
 }
