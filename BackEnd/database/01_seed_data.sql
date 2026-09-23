@@ -174,3 +174,6 @@ BEGIN
         SYSUTCDATETIME()
     );
 END;
+
+SELECT *
+FROM [AccountSequences];

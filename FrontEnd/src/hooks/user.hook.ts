@@ -34,10 +34,27 @@ export const useUsers = (initialParams: UserFilterParams = {}) => {
     fetchUsers();
   }, [fetchUsers]);
 
+  const getMe = async () => {
+        try {
+            setLoading(true)
+            setError(null)
+
+            const response = await userApi.getMe()
+
+            return response.data.data
+        } catch (error) {
+            setError(error)
+            return null
+        } finally {
+            setLoading(false)
+        }
+    }
+
   return {
     users,
     total,
     params,
+    getMe,
     setParams,
     loading,
     error,

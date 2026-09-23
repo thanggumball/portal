@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { Layout, Menu, Breadcrumb, Dropdown, Avatar, Switch, Space, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import { Link, Outlet, useLocation, useMatches, useNavigate } from 'react-router';
@@ -6,9 +6,10 @@ import path from '../../constants/path';
 import { navConfig } from '../../constants/nav';
 import { isLeaf, type NavItem } from '../../types/sidebar/nav';
 import { useThemeMode } from '../../contexts/ThemeContext';
+import { AppContext } from '@/contexts/AppContext';
+import { useAuth } from '@/hooks/auth.hook';
 
 const { Header, Sider, Content } = Layout;
-const MOCK_USERNAME = 'Some username';
 
 const SIDER_WIDTH = 200;
 const SIDER_COLLAPSED_WIDTH = 80;
@@ -30,6 +31,14 @@ export default function ProtectedLayout() {
   const navigate = useNavigate();
   const { mode, toggle } = useThemeMode();
   const { token } = theme.useToken();
+  const { user, resetAuth } = useContext(AppContext);
+  const { logout, loading: logoutLoading } = useAuth()
+
+  console.log("user: ", user)
+  const handleLogout = async () => {
+    await logout()
+    resetAuth()
+  }
 
   const menuItems = useMemo(() => toMenuItems(navConfig), []);
   const breadcrumbItems = useMemo(
@@ -45,14 +54,25 @@ export default function ProtectedLayout() {
   const logoWidth = collapsed ? SIDER_COLLAPSED_WIDTH : SIDER_WIDTH;
 
   const userMenuItems: MenuProps['items'] = [
-    { key: 'profile', label: 'Profile', onClick: () => navigate(path.home) },
-    { type: 'divider' },
+    {
+      key: 'profile',
+      label: 'Profile',
+      onClick: () => navigate(path.home)
+    },
+    {
+      type: 'divider'
+    },
     {
       key: 'logout',
-      label: <span style={{ color: token.colorError }}>Logout</span>,
-      onClick: () => navigate(path.home),
-    },
-  ];
+      label: (
+        <span style={{ color: token.colorError }}>
+          {logoutLoading ? 'Logging out...' : 'Logout'}
+        </span>
+      ),
+      disabled: logoutLoading,
+      onClick: handleLogout
+    }
+  ]
 
   return (
     <Layout style={{ height: '100vh' }}>
@@ -102,9 +122,12 @@ export default function ProtectedLayout() {
             />
             <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
               <Avatar
-                style={{ cursor: 'pointer', backgroundColor: token.colorPrimary }}
+                style={{
+                  cursor: 'pointer',
+                  backgroundColor: token.colorPrimary
+                }}
               >
-                {MOCK_USERNAME.charAt(0).toUpperCase()}
+                {user?.userName?.charAt(0).toUpperCase()}
               </Avatar>
             </Dropdown>
           </Space>

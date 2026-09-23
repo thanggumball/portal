@@ -1,7 +1,9 @@
-export const UserStatus {
-  Active = 1,
-  Inactive = 2,
-  Locked = 3,
+import type { Role } from "@/constants/roles";
+
+export const UserStatus = {
+  Active: 1,
+  Inactive: 2,
+  Locked: 3,
 } as const;
 
 export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
@@ -39,4 +41,16 @@ export interface UserFilterParams {
   createdTo?: string;
   lastLoginFrom?: string;
   lastLoginTo?: string;
+}
+
+export interface User {
+    id: string;
+    email: string;
+    userName: string;
+    fullName: string;
+    studentCode: string;
+    avatarUrl: string;
+    roleName: Role;
+    lastLoginAt: string;
+    createdAt: string;
 }
