@@ -2,8 +2,11 @@ import { Button, Flex, Table, Switch } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import FormModal from './FormModal';
 import type { Attribute } from '../../types/components/attribute';
+
+dayjs.extend(utc);
 
 interface TableReference {
     path: string;
@@ -34,6 +37,10 @@ const formatForDisplay = (item: Record<string, unknown>, mapper: Attribute[]) =>
     switch (f.type) {
       case 'date':
         out[f.key] = v ? dayjs(v as string | number).format('DD-MM-YYYY') : '';
+        break;
+      case 'datetime':
+        // Backend stores UTC but sends it without a trailing Z, so tell dayjs it is UTC
+        out[f.key] = v ? dayjs.utc(v as string).local().format('DD-MM-YYYY HH:mm:ss') : '';
         break;
       case 'year':
         out[f.key] = v ? dayjs().year(Number(v)).format('YYYY') : '';

@@ -11,6 +11,11 @@ const path = {
     root: '/users',
     manage: '/users/manage',
   },
+  auditLogs: {
+    root: '/audit-logs',
+    manage: '/audit-logs/manage',
+    detail: '/audit-logs/:id',
+  },
 } as const;
 
 export default path;

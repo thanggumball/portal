@@ -2,7 +2,7 @@ import type { Rule } from 'antd/es/form';
 
 export type FieldType =
   | 'string' | 'number' | 'boolean' | 'checkbox'
-  | 'select' | 'date' | 'year' | 'month' | 'textarea';
+  | 'select' | 'date' | 'datetime' | 'year' | 'month' | 'textarea';
 
 export interface SelectOption {
   value: string | number;
@@ -24,13 +24,14 @@ export interface BooleanAttribute  extends BaseAttribute { type: 'boolean'; }
 export interface CheckboxAttribute extends BaseAttribute { type: 'checkbox'; }
 export interface SelectAttribute   extends BaseAttribute { type: 'select';   options: SelectOption[]; defaultValue?: string | number; }
 export interface DateAttribute     extends BaseAttribute { type: 'date'; }
+export interface DateTimeAttribute extends BaseAttribute { type: 'datetime'; }
 export interface YearAttribute     extends BaseAttribute { type: 'year'; }
 export interface MonthAttribute    extends BaseAttribute { type: 'month'; }
 export interface TextAreaAttribute extends BaseAttribute { type: 'textarea'; rowSize?: number; }
 
 export type Attribute =
   | StringAttribute | NumberAttribute | BooleanAttribute | CheckboxAttribute
-  | SelectAttribute | DateAttribute | YearAttribute | MonthAttribute | TextAreaAttribute;
+  | SelectAttribute | DateAttribute | DateTimeAttribute | YearAttribute | MonthAttribute | TextAreaAttribute;
 
 export interface Filter {
   key: string;

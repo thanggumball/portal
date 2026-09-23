@@ -18,4 +18,11 @@ export const navConfig: NavItem[] = [
       { key: 'users-manage', label: 'Manage', path: path.users.manage, roles: [ROLES.ADMIN] },
     ],
   },
+  {
+    key: 'audit-logs',
+    label: 'Audit Logs',
+    children: [
+      { key: 'audit-logs-manage', label: 'Manage', path: path.auditLogs.manage, roles: [ROLES.ADMIN] },
+    ],
+  },
 ];

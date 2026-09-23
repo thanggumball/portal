@@ -12,6 +12,8 @@ const SignUp = lazy(() => import('../pages/SignUp'))
 const AnnouncementPublish = () => <div>Announcement / Publish</div>
 const AnnouncementManage = () => <div>Announcement / Manage</div>
 const UsersManage = lazy(() => import('../pages/UserManage'))
+const AuditLogManage = lazy(() => import('../pages/AuditLog'))
+const AuditLogDetail = lazy(() => import('../pages/AuditLog/AuditLogDetail'))
 
 export const router = createBrowserRouter([
 
@@ -72,6 +74,22 @@ export const router = createBrowserRouter([
                 path: path.users.manage,
                 handle: { breadcrumb: 'Manage' },
                 element: <UsersManage />
+              }
+            ]
+          },
+          {
+            path: path.auditLogs.root,
+            handle: { breadcrumb: 'Audit Logs' },
+            children: [
+              {
+                path: path.auditLogs.manage,
+                handle: { breadcrumb: 'Manage' },
+                element: <AuditLogManage />
+              },
+              {
+                path: path.auditLogs.detail,
+                handle: { breadcrumb: 'Detail' },
+                element: <AuditLogDetail />
               }
             ]
           }
