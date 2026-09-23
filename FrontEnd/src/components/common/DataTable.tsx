@@ -28,14 +28,22 @@ interface DataTableProps<T extends { id: string | number }> {
 
 // Display-only formatting. Update forms get the RAW record.
 const formatForDisplay = (item: Record<string, unknown>, mapper: Attribute[]) => {
-    const out: Record<string, unknown> = { ...item };
-    for (const f of mapper) {
-        const v = item[f.key];
-        if (f.type === 'date')       out[f.key] = v ? dayjs(Number(v)).format('DD-MM-YYYY') : '';
-        else if (f.type === 'year')  out[f.key] = v ? dayjs().year(Number(v)).format('YYYY') : '';
-        else if (f.type === 'select') out[f.key] = f.options.find((o) => o.value === v)?.label ?? '';
+  const out: Record<string, unknown> = { ...item };
+  for (const f of mapper) {
+    const v = item[f.key];
+    switch (f.type) {
+      case 'date':
+        out[f.key] = v ? dayjs(v as string | number).format('DD-MM-YYYY') : '';
+        break;
+      case 'year':
+        out[f.key] = v ? dayjs().year(Number(v)).format('YYYY') : '';
+        break;
+      case 'select':
+        out[f.key] = f.options.find((o) => o.value === v)?.label ?? '';
+        break;
     }
-    return out;
+  }
+  return out;
 };
 
 export default function DataTable<T extends { id: string | number; isActive?: boolean }>({name, dataSource, attributeMapper, updateAttributeMapper, updateItemFunc, deleteItemFunc, reference, pageNumber = 1, pageSize = 10, buttons = true, writePermission = true, deletePermission = true, loading = false,}: DataTableProps<T>) {

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using StudentPortal.Common.DTOs.Role;
 using StudentPortal.Common.DTOs.Shared;
 using StudentPortal.Service.Interfaces;
 
