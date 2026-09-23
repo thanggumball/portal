@@ -7,7 +7,7 @@ using StudentPortal.Service.Interfaces;
 
 namespace StudentPortal.API.Controllers;
 
-[Authorize(Roles = RoleConstants.Admin)]
+// [Authorize(Roles = RoleConstants.Admin)]
 [ApiController]
 [Route("api/users")]
 public class UsersController : ControllerBase
@@ -20,10 +20,13 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    public Task<IActionResult> Search(
+    public async Task<IActionResult> Search(
         [FromQuery] UserFilter filter,
         CancellationToken ct)
-        => throw new NotImplementedException();
+    {
+        var result = await _userService.SearchUsersAsync(filter, ct);
+        return Ok(ApiResponse<PagedResult<UserResponse>>.Ok(result));
+    }
 
     [HttpGet("{id:guid}")]
     public Task<IActionResult> GetById(

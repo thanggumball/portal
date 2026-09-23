@@ -1,4 +1,5 @@
 using StudentPortal.Common.DTOs.Mail;
+using StudentPortal.Common.DTOs.Shared;
 using StudentPortal.Common.DTOs.User;
 using StudentPortal.Common.Enums;
 using StudentPortal.Common.Exceptions;
@@ -204,5 +205,20 @@ public class UserService : IUserService
         await _unitOfWork.SaveChangesAsync(ct);
 
         return UserMapper.ToResponse(user);
+    }
+
+    public async Task<PagedResult<UserResponse>> SearchUsersAsync(
+    UserFilter filter,
+    CancellationToken ct = default)
+    {
+        var (users, total) = await _userRepository.SearchAsync(filter, ct);
+
+        return new PagedResult<UserResponse>
+        {
+            Items = users.Select(UserMapper.ToResponse).ToList(),
+            Total = total,
+            Page = filter.Page,
+            PageSize = filter.PageSize,
+        };
     }
 }
