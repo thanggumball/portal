@@ -1,13 +1,16 @@
+using Audit.Core;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
 using StudentPortal.API.Extensions;
 using StudentPortal.API.Middlewares;
+using StudentPortal.Common.Constants;
 using StudentPortal.Common.DTOs.Shared;
 using StudentPortal.Service;
 using StudentPortal.Service.Implementations;
 using StudentPortal.Service.Interfaces;
 using StudentPortal.Service.Validations.Auth;
+using System.Security.Claims;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -70,7 +73,30 @@ var connectionString = builder.Configuration.GetConnectionString(
 
 builder.Services.AddServiceLayer(connectionString);
 
+// The audit custom action below needs it to know who is making the change
+builder.Services.AddHttpContextAccessor();
+
 var app = builder.Build();
+
+// IHttpContextAccessor is a SINGLETON that always resolves the current request, so it is
+// safe to capture here. NEVER capture a scoped service instead: the custom action lives
+// for the whole application lifetime and would pin the very first request's user forever.
+var httpContextAccessor = app.Services.GetRequiredService<IHttpContextAccessor>();
+
+Audit.Core.Configuration.AddCustomAction(ActionType.OnScopeCreated, scope =>
+{
+    var httpContext = httpContextAccessor.HttpContext;
+    if (httpContext is null)
+    {
+        return;   // a change made outside an HTTP request (background job...): no user to record
+    }
+
+    var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                 ?? httpContext.User.FindFirstValue("sub");
+
+    scope.SetCustomField(AuditFields.UserId, userId);
+    scope.SetCustomField(AuditFields.IpAddress, httpContext.Connection.RemoteIpAddress?.ToString());
+});
 
 // Configure the HTTP request pipeline.
 app.UseMiddleware<RequestLoggingMiddleware>();
