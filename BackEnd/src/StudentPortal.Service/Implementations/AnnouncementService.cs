@@ -118,29 +118,9 @@ public class AnnouncementService : IAnnouncementService
         CreateAnnouncementRequest request,
         CancellationToken ct = default)
     {
-        var categoryIds = request.CategoryIds
-            .Distinct()
-            .ToList();
-
-        var categories =
-            await _categoryRepository.GetByIdsAsync(
-                categoryIds,
-                ct);
-
-        if (categories.Count != categoryIds.Count)
-        {
-            var existingCategoryIds = categories
-                .Select(category => category.Id)
-                .ToHashSet();
-
-            var missingCategoryIds = categoryIds
-                .Where(id =>
-                    !existingCategoryIds.Contains(id));
-
-            throw new BadRequestException(
-                "Categories were not found: " +
-                $"{string.Join(", ", missingCategoryIds)}.");
-        }
+        var categories = await GetCategoriesAsync(
+            request.CategoryIds,
+            ct);
 
         var now = DateTime.UtcNow;
 
@@ -184,7 +164,7 @@ public class AnnouncementService : IAnnouncementService
                 });
         }
 
-        await _announcementRepository.AddAsync(
+        await _announcementRepository.AddAnnouncementAsync(
             announcement,
             ct);
 
@@ -193,28 +173,114 @@ public class AnnouncementService : IAnnouncementService
         return MapToDetailResponse(announcement);
     }
 
-    public Task<AnnouncementDetailResponse> UpdateAsync(
+    public async Task<AnnouncementDetailResponse> UpdateAsync(
         Guid currentUserId,
         Guid id,
         UpdateAnnouncementRequest request,
         CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var announcement = await _announcementRepository
+            .GetForUpdateAsync(id, ct);
+
+        if (announcement is null)
+        {
+            throw new NotFoundException(
+                "Announcement not found.");
+        }
+
+        var categories = await GetCategoriesAsync(
+            request.CategoryIds,
+            ct);
+
+        var now = DateTime.UtcNow;
+
+        announcement.Title = request.Title.Trim();
+        announcement.Summary = string.IsNullOrWhiteSpace(
+            request.Summary)
+                ? null
+                : request.Summary.Trim();
+        announcement.Content = request.Content.Trim();
+        announcement.RoleReceived = request.RoleReceived;
+        announcement.UpdatedBy = currentUserId;
+        announcement.UpdatedAt = now;
+
+        announcement.AnnouncementCategory.Clear();
+
+        foreach (var category in categories)
+        {
+            announcement.AnnouncementCategory.Add(
+                new AnnouncementCategory
+                {
+                    Announcement = announcement,
+                    CategoryId = category.Id,
+                    Category = category,
+                    CreatedAt = now
+                });
+        }
+
+        _announcementRepository.UpdateAnnouncement(
+            announcement);
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return MapToDetailResponse(announcement);
     }
 
-    public Task PublishAsync(
+    public async Task PublishAsync(
         Guid currentUserId,
         Guid id,
         CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var announcement = await _announcementRepository
+            .GetForUpdateAsync(id, ct);
+
+        if (announcement is null)
+        {
+            throw new NotFoundException(
+                "Announcement not found.");
+        }
+
+        if (announcement.Status != AnnouncementStatus.Draft)
+        {
+            throw new ConflictException(
+                "Only draft announcements can be published.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        announcement.Status = AnnouncementStatus.Published;
+        announcement.PublishedAt = now;
+        announcement.UpdatedBy = currentUserId;
+        announcement.UpdatedAt = now;
+
+        _announcementRepository.UpdateAnnouncement(
+            announcement);
+
+        await _unitOfWork.SaveChangesAsync(ct);
     }
 
-    public Task SoftDeleteAsync(
+    public async Task SoftDeleteAsync(
+        Guid currentUserId,
         Guid id,
         CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var announcement = await _announcementRepository
+            .GetForUpdateAsync(id, ct);
+
+        if (announcement is null)
+        {
+            throw new NotFoundException(
+                "Announcement not found.");
+        }
+
+        announcement.IsDeleted = true;
+        announcement.UpdatedBy = currentUserId;
+        announcement.UpdatedAt = DateTime.UtcNow;
+
+        _announcementRepository.UpdateAnnouncement(
+            announcement);
+
+        await _unitOfWork.SaveChangesAsync(ct);
     }
 
     private static AnnouncementRoleReceived MapUserRole(
@@ -233,6 +299,35 @@ public class AnnouncementService : IAnnouncementService
             _ => throw new UnauthorizedAccessException(
                 $"Role '{roleName}' cannot access announcements.")
         };
+    }
+
+    private async Task<IReadOnlyList<Category>> GetCategoriesAsync(
+        IReadOnlyCollection<Guid> requestedCategoryIds,
+        CancellationToken ct)
+    {
+        var categoryIds = requestedCategoryIds
+            .Distinct()
+            .ToList();
+
+        var categories = await _categoryRepository.GetByIdsAsync(
+            categoryIds,
+            ct);
+
+        if (categories.Count == categoryIds.Count)
+        {
+            return categories;
+        }
+
+        var existingCategoryIds = categories
+            .Select(category => category.Id)
+            .ToHashSet();
+
+        var missingCategoryIds = categoryIds
+            .Where(id => !existingCategoryIds.Contains(id));
+
+        throw new BadRequestException(
+            "Categories were not found: " +
+            $"{string.Join(", ", missingCategoryIds)}.");
     }
 
     private static AnnouncementResponse MapToResponse(

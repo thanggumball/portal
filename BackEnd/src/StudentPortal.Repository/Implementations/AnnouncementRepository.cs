@@ -45,6 +45,19 @@ public class AnnouncementRepository
                 a.Content.Contains(keyword));
         }
 
+        if (filter.Status.HasValue)
+        {
+            query = query.Where(a =>
+                a.Status == filter.Status.Value);
+        }
+
+        if (filter.CategoryId.HasValue)
+        {
+            query = query.Where(a =>
+                a.AnnouncementCategory.Any(ac =>
+                    ac.CategoryId == filter.CategoryId.Value));
+        }
+
         if (!string.IsNullOrWhiteSpace(filter.CategoryName))
         {
             var categoryName = filter.CategoryName.Trim();
@@ -104,5 +117,32 @@ public class AnnouncementRepository
                     a.RoleReceived <= userRole,
                 ct);
     }
-}
 
+    public async Task<Announcement?> GetForUpdateAsync(
+        Guid announcementId,
+        CancellationToken ct = default)
+    {
+        return await _context.Announcements
+            .Include(announcement =>
+                announcement.AnnouncementCategory)
+            .ThenInclude(link => link.Category)
+            .FirstOrDefaultAsync(
+                announcement =>
+                    announcement.Id == announcementId &&
+                    !announcement.IsDeleted,
+                ct);
+    }
+
+    public Task AddAnnouncementAsync(
+        Announcement announcement,
+        CancellationToken ct = default)
+    {
+        return AddAsync(announcement, ct);
+    }
+
+    public void UpdateAnnouncement(
+        Announcement announcement)
+    {
+        _context.Entry(announcement).State = EntityState.Modified;
+    }
+}

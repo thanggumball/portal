@@ -32,6 +32,7 @@ public interface IAnnouncementService
         CancellationToken ct = default);
 
     Task SoftDeleteAsync(
+        Guid currentUserId,
         Guid id,
         CancellationToken ct = default);
 }

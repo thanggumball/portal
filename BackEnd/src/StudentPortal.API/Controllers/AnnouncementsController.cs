@@ -44,10 +44,11 @@ public class AnnouncementsController : ControllerBase
 
     [Authorize(Roles = RoleConstants.Admin)]
     [HttpPost]
-    public async Task<IActionResult> Create(CreateAnnouncementRequest request, CancellationToken ct)
+    public async Task<IActionResult> Create(
+        CreateAnnouncementRequest request,
+        CancellationToken ct)
     {
-        var currentUserId = Guid.Parse(
-            User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var currentUserId = GetCurrentUserId();
 
         var result = await _announcementService.CreateAsync(
             currentUserId,
@@ -62,16 +63,66 @@ public class AnnouncementsController : ControllerBase
 
     [Authorize(Roles = RoleConstants.Admin)]
     [HttpPut("{id:guid}")]
-    public Task<IActionResult> Update(Guid id, UpdateAnnouncementRequest request, CancellationToken ct)
-        => throw new NotImplementedException();
+    public async Task<IActionResult> Update(
+        Guid id,
+        UpdateAnnouncementRequest request,
+        CancellationToken ct)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        var result = await _announcementService.UpdateAsync(
+            currentUserId,
+            id,
+            request,
+            ct);
+
+        return Ok(
+            ApiResponse<AnnouncementDetailResponse>.Ok(result));
+    }
 
     [Authorize(Roles = RoleConstants.Admin)]
     [HttpPatch("{id:guid}/publish")]
-    public Task<IActionResult> Publish(Guid id, CancellationToken ct)
-        => throw new NotImplementedException();
+    public async Task<IActionResult> Publish(
+        Guid id,
+        CancellationToken ct)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        await _announcementService.PublishAsync(
+            currentUserId,
+            id,
+            ct);
+
+        return NoContent();
+    }
 
     [Authorize(Roles = RoleConstants.Admin)]
     [HttpDelete("{id:guid}")]
-    public Task<IActionResult> Delete(Guid id, CancellationToken ct)
-        => throw new NotImplementedException();
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken ct)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        await _announcementService.SoftDeleteAsync(
+            currentUserId,
+            id,
+            ct);
+
+        return NoContent();
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            throw new UnauthorizedAccessException(
+                "User ID claim is missing or invalid.");
+        }
+
+        return userId;
+    }
 }

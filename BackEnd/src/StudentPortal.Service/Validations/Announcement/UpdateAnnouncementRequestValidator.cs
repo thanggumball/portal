@@ -1,40 +1,40 @@
 using FluentValidation;
 using StudentPortal.Common.DTOs.Announcement;
-using StudentPortal.Common.Enums;
 
 namespace StudentPortal.Service.Validations.Announcement;
 
-public class CreateAnnouncementRequestValidator : AbstractValidator<CreateAnnouncementRequest>
+public class UpdateAnnouncementRequestValidator
+    : AbstractValidator<UpdateAnnouncementRequest>
 {
-    public CreateAnnouncementRequestValidator()
+    public UpdateAnnouncementRequestValidator()
     {
-        RuleFor(x => x.Title)
+        RuleFor(request => request.Title)
             .NotEmpty()
             .WithMessage("Title is required.")
             .MaximumLength(255)
             .WithMessage("Title must not exceed 255 characters.");
 
-        RuleFor(x => x.Summary)
+        RuleFor(request => request.Summary)
             .MaximumLength(1000)
             .WithMessage("Summary must not exceed 1000 characters.");
 
-        RuleFor(x => x.Content)
+        RuleFor(request => request.Content)
             .NotEmpty()
             .WithMessage("Content is required.");
 
-        RuleFor(x => x.RoleReceived)
+        RuleFor(request => request.RoleReceived)
             .IsInEnum()
             .WithMessage("Invalid announcement recipient.");
 
-        RuleFor(x => x.CategoryIds)
+        RuleFor(request => request.CategoryIds)
             .NotEmpty()
             .WithMessage("At least one category is required.");
 
-        RuleForEach(x => x.CategoryIds)
+        RuleForEach(request => request.CategoryIds)
             .NotEqual(Guid.Empty)
             .WithMessage("Category ID must not be empty.");
 
-        RuleFor(x => x.CategoryIds)
+        RuleFor(request => request.CategoryIds)
             .Must(categoryIds =>
                 categoryIds is not null &&
                 categoryIds.Distinct().Count() == categoryIds.Count)
