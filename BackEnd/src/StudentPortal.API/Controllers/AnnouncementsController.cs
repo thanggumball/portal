@@ -38,11 +38,6 @@ public class AnnouncementsController : ControllerBase
 
         return Ok(result);
     }
-
-        return Ok(
-            ApiResponse<PagedResult<AnnouncementResponse>>
-                .Ok(result));
-    }
     [HttpGet("{id:guid}")]
     public Task<IActionResult> GetById(Guid id, CancellationToken ct)
         => throw new NotImplementedException();
