@@ -18,7 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IEmailWhitelistRepository, EmailWhitelistRepository>();
-        
+        services.AddScoped<IProfileRepository, ProfileRepository>();
         return services;
     }
 }
