@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StudentPortal.Common.Constants;
 using StudentPortal.Common.DTOs.Announcement;
+using StudentPortal.Common.DTOs.Shared;
 using StudentPortal.Service.Interfaces;
 using System.Security.Claims;
 
@@ -38,14 +39,31 @@ public class AnnouncementsController : ControllerBase
         return Ok(result);
     }
 
+        return Ok(
+            ApiResponse<PagedResult<AnnouncementResponse>>
+                .Ok(result));
+    }
     [HttpGet("{id:guid}")]
     public Task<IActionResult> GetById(Guid id, CancellationToken ct)
         => throw new NotImplementedException();
 
     [Authorize(Roles = RoleConstants.Admin)]
     [HttpPost]
-    public Task<IActionResult> Create(CreateAnnouncementRequest request, CancellationToken ct)
-        => throw new NotImplementedException();
+    public async Task<IActionResult> Create(CreateAnnouncementRequest request, CancellationToken ct)
+    {
+        var currentUserId = Guid.Parse(
+            User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var result = await _announcementService.CreateAsync(
+            currentUserId,
+            request,
+            ct);
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = result.Id },
+            ApiResponse<AnnouncementDetailResponse>.Ok(result));
+    }
 
     [Authorize(Roles = RoleConstants.Admin)]
     [HttpPut("{id:guid}")]
