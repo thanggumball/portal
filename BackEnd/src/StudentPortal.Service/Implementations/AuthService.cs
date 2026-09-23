@@ -1,46 +1,51 @@
 using System.Security.Cryptography;
 using StudentPortal.Common.DTOs.Auth;
+using StudentPortal.Common.DTOs.Mail;
 using StudentPortal.Common.DTOs.User;
 using StudentPortal.Common.Enums;
+using StudentPortal.Common.Exceptions;
 using StudentPortal.Common.Settings;
 using StudentPortal.Repository.Entities;
 using StudentPortal.Repository.Interfaces;
 using StudentPortal.Service.Helpers;
 using StudentPortal.Service.Interfaces;
-using StudentPortal.Common.Exceptions;
-using System.Runtime.Intrinsics.Arm;
-using Microsoft.Extensions.Logging;
+
 
 namespace StudentPortal.Service.Implementations;
 
 public class AuthService : IAuthService
 {
     private const string DefaultStudentRole = "Student";
+    private readonly HttpClient _httpClient;
 
+    private readonly IMailServiceClient _mailServiceClient;
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
+    private readonly IEmailWhitelistRepository _emailWhitelistRepository;
+
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtTokenHelper _jwtTokenHelper;
     private readonly JwtSettings _jwtSettings;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
-    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
-        IUserRepository userRepository,
-        IRoleRepository roleRepository,
-        IUnitOfWork unitOfWork,
-        IRefreshTokenRepository refreshTokenRepository,
-        IJwtTokenHelper jwtTokenHelper,
-        ILogger<AuthService> logger,
-        JwtSettings jwtSettings)
+    IUserRepository userRepository,
+    IRoleRepository roleRepository,
+    IEmailWhitelistRepository emailWhitelistRepository,
+    IUnitOfWork unitOfWork,
+    IRefreshTokenRepository refreshTokenRepository,
+    IJwtTokenHelper jwtTokenHelper,
+    JwtSettings jwtSettings,
+    IMailServiceClient mailServiceClient)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
+        _emailWhitelistRepository = emailWhitelistRepository;
         _unitOfWork = unitOfWork;
         _refreshTokenRepository = refreshTokenRepository;
         _jwtTokenHelper = jwtTokenHelper;
-        _logger = logger;
         _jwtSettings = jwtSettings;
+        _mailServiceClient = mailServiceClient;
     }
 
     public async Task<LoginResponse> LoginAsync(
@@ -56,7 +61,6 @@ public class AuthService : IAuthService
                 request.Password,
                 user.PasswordHash))
         {
-            _logger.LogWarning("Login failed for email {Email}", request.Email);
             throw new UnauthorizedAccessException(
                 "Invalid email or password.");
         }
@@ -244,4 +248,150 @@ public class AuthService : IAuthService
 
         await _unitOfWork.SaveChangesAsync(ct);
     }
+
+    public async Task ForgotPasswordAsync(
+    ForgotPasswordRequest request,
+    CancellationToken ct = default)
+    {
+        var user = await _userRepository.GetForLoginAsync(
+            request.Email,
+            ct);
+
+        if (user is null ||
+            user.IsDeleted ||
+            user.Status != UserStatus.Active)
+        {
+            throw new NotFoundException(
+                "User with this email was not found.");
+        }
+
+        var temporaryPassword =
+            Convert.ToBase64String(
+                RandomNumberGenerator.GetBytes(9));
+
+        await using var transaction =
+            await _unitOfWork.BeginTransactionAsync(ct);
+
+        try
+        {
+            await _mailServiceClient.SendMailAsync(
+                new SendMailRequest
+                {
+                    To = user.Email,
+                    Subject = "Student Portal - Password Reset",
+                    Body =
+                        $"Hello {user.FullName},\n\n" +
+                        "Your Student Portal temporary password is:\n\n" +
+                        $"{temporaryPassword}\n\n" +
+                        "Please use this password to log in to Student Portal.",
+                    IsHtml = false
+                },
+                ct);
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+                temporaryPassword);
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            _userRepository.Update(user);
+
+            await _unitOfWork.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    public async Task SelfRegisterAsync(
+    SelfRegisterRequest request,
+    CancellationToken ct = default)
+{
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        throw new BadRequestException("Email is required.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.FullName))
+    {
+        throw new BadRequestException("Full name is required.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Password))
+    {
+        throw new BadRequestException("Password is required.");
+    }
+
+    var email = request.Email.Trim().ToLowerInvariant();
+    var fullName = request.FullName.Trim();
+
+    var existingUser = await _userRepository
+        .ExistsByEmailAsync(email, ct);
+
+    if (existingUser)
+    {
+        throw new BadRequestException(
+            "An account with this email already exists.");
+    }
+
+    var whitelist = await _emailWhitelistRepository
+        .GetAvailableByEmailAsync(email, ct);
+
+    if (whitelist is null)
+    {
+        throw new BadRequestException(
+            "This email is not whitelisted or has already been used.");
+    }
+
+    await using var transaction =
+        await _unitOfWork.BeginTransactionAsync(ct);
+
+    try
+    {
+        var user = new User
+        {
+            Email = email,
+            UserName = email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+                request.Password),
+            FullName = fullName,
+            UserCode = null,
+            RoleId = whitelist.RoleId,
+            Role = whitelist.Role,
+            Status = UserStatus.Active,
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await _userRepository.AddAsync(user, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        await _mailServiceClient.CreateAccountAsync(
+            new CreateMailAccountRequest
+            {
+                Email = email,
+                Password = request.Password,
+                FullName = fullName
+            },
+            ct);
+
+        whitelist.IsUsed = true;
+        whitelist.UsedAt = DateTime.UtcNow;
+        whitelist.UpdatedAt = DateTime.UtcNow;
+
+        _emailWhitelistRepository.Update(whitelist);
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        await transaction.CommitAsync(ct);
+    }
+    catch
+    {
+        await transaction.RollbackAsync(ct);
+        throw;
+    }
+}
 }

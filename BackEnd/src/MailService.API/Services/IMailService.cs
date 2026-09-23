@@ -8,6 +8,10 @@ public interface IMailService
         SendMailRequest request,
         CancellationToken ct = default);
 
+    Task<MailResponse> SendInternalAsync(
+        InternalSendMailRequest request,
+        CancellationToken ct = default);
+
     Task<List<MailResponse>> GetInboxAsync(
         CancellationToken ct = default);
 

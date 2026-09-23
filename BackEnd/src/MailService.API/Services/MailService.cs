@@ -9,7 +9,7 @@ public class MailService : IMailService
 {
     private readonly IMailRepository _mailRepository;
     private readonly ICurrentMailUser _currentUser;
-
+    private const string AdminEmail = "admin@staff.avepoint.com";
     public MailService(
         IMailRepository mailRepository,
         ICurrentMailUser currentUser)
@@ -187,5 +187,40 @@ public class MailService : IMailService
             ReceivedAt = mail.ReceivedAt,
             CreatedAt = mail.CreatedAt
         };
+    }
+
+    public async Task<MailResponse> SendInternalAsync(
+    InternalSendMailRequest request,
+    CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+
+        var receivedMail = new Mail
+        {
+            Id = Guid.NewGuid(),
+
+            MessageId =
+                $"<{Guid.NewGuid():N}@studentportal.local>",
+
+            From = AdminEmail,
+            To = request.To,
+            Subject = request.Subject,
+            Body = request.Body,
+            IsHtml = request.IsHtml,
+
+            Direction = MailDirection.Received,
+            Status = MailStatus.Received,
+
+            ReceivedAt = now,
+            CreatedAt = now
+        };
+
+        await _mailRepository.AddAsync(
+            receivedMail,
+            ct);
+
+        await _mailRepository.SaveChangesAsync(ct);
+
+        return MapToResponse(receivedMail);
     }
 }

@@ -18,8 +18,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAccountSequenceRepository, AccountSequenceRepository>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IEmailWhitelistService, EmailWhitelistService>();
         services.AddScoped<IJwtTokenHelper, JwtTokenHelper>();
         services.AddScoped<IAnnouncementService, AnnouncementService>();
+        services.AddScoped<IProfileService, ProfileService>();
 
         return services;
     }
