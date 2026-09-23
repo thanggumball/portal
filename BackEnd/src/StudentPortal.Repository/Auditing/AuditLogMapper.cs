@@ -40,8 +40,11 @@ public static class AuditLogMapper
                 break;
 
             case "Update":
+                // DbSet.Update() marks EVERY column as modified, so Changes also contains
+                // columns whose value did not actually change -> keep only real changes
                 var changes = (entry.Changes ?? new List<EventEntryChange>())
                     .Where(c => !NoiseColumns.Contains(c.ColumnName))
+                    .Where(c => !Equals(c.OriginalValue, c.NewValue))
                     .ToList();
 
                 // Only noise columns or ignored columns changed
