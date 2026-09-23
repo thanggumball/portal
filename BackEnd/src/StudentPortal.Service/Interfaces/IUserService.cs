@@ -7,4 +7,9 @@ public interface IUserService
     Task<UserResponse> CreateUserAsync(
         CreateUserRequest request,
         CancellationToken ct = default);
+
+    Task<UserResponse> UpdateUserAsync(
+        Guid userId,
+        UpdateUserRequest request,
+        CancellationToken ct = default);
 }

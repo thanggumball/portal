@@ -50,7 +50,8 @@ public class ExceptionHandlingMiddleware
         };
         if (statusCode == StatusCodes.Status500InternalServerError)
         {
-            _logger.LogError(exception, "Unhandled error at {Path}", context.Request.Path);
+            _logger.LogError(exception, "[{TraceId}] Unhandled exception at {Method} {Path}",
+                context.TraceIdentifier, context.Request.Method, context.Request.Path);
         }
 
         var responseMessage = statusCode == StatusCodes.Status500InternalServerError && _environment.IsDevelopment()

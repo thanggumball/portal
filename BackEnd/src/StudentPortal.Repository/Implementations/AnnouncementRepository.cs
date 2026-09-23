@@ -1,73 +1,108 @@
 using Microsoft.EntityFrameworkCore;
 using StudentPortal.Common.DTOs.Announcement;
+using StudentPortal.Common.Enums;
 using StudentPortal.Repository.Data;
 using StudentPortal.Repository.Entities;
 using StudentPortal.Repository.Interfaces;
 
 namespace StudentPortal.Repository.Implementations;
 
-public class AnnouncementRepository : GenericRepository<Announcement>, IAnnouncementRepository
+public class AnnouncementRepository
+    : GenericRepository<Announcement>, IAnnouncementRepository
 {
-    public AnnouncementRepository(AppDbContext context) : base(context) { }
-
-    public async Task<(IReadOnlyList<Announcement> Items, int Total)> SearchAsync(
-        AnnouncementFilter filter, CancellationToken ct = default)
+    public AnnouncementRepository(AppDbContext context)
+        : base(context)
     {
-        var query = _context.Announcements
+    }
+
+    public async Task<(IReadOnlyList<Announcement> Items, int TotalCount)>
+        SearchAsync(
+            AnnouncementFilter filter,
+            AnnouncementRoleReceived userRole,
+            CancellationToken ct = default)
+    {
+        var pageNumber = Math.Max(filter.Page, 1);
+        var pageSize = Math.Clamp(filter.PageSize, 1, 100);
+
+        IQueryable<Announcement> query = _context.Announcements
             .AsNoTracking()
-            .Where(announcement => !announcement.IsDeleted);
+            .Where(a =>
+                !a.IsDeleted &&
+                a.Status == AnnouncementStatus.Published &&
+                a.CreatedAt <= DateTime.UtcNow &&
+                (
+                    a.RoleReceived == AnnouncementRoleReceived.All ||
+                    a.RoleReceived <= userRole
+                ));
 
         if (!string.IsNullOrWhiteSpace(filter.Keyword))
         {
             var keyword = filter.Keyword.Trim();
 
-            query = query.Where(announcement =>
-                announcement.Title.Contains(keyword) ||
-                (
-                    announcement.Summary != null &&
-                    announcement.Summary.Contains(keyword)
-                ));
+            query = query.Where(a =>
+                a.Title.Contains(keyword) ||
+                (a.Summary != null && a.Summary.Contains(keyword)) ||
+                a.Content.Contains(keyword));
         }
 
-        if (filter.Status.HasValue)
+        if (!string.IsNullOrWhiteSpace(filter.CategoryName))
         {
-            query = query.Where(announcement =>
-                announcement.Status == filter.Status.Value);
+            var categoryName = filter.CategoryName.Trim();
+
+            query = query.Where(a =>
+                a.AnnouncementCategory.Any(ac =>
+                    ac.Category.Name == categoryName));
         }
 
-        if (filter.RoleReceived.HasValue)
+        if (filter.StartDate.HasValue)
         {
-            query = query.Where(announcement =>
-                announcement.RoleReceived ==
-                filter.RoleReceived.Value);
+            var publishedFrom = filter.StartDate.Value.Date;
+
+            query = query.Where(a =>
+                a.PublishedAt >= publishedFrom);
         }
 
-        if (filter.CategoryId.HasValue)
+        if (filter.EndDate.HasValue)
         {
-            query = query.Where(announcement =>
-                announcement.AnnouncementCategory.Any(link =>
-                    link.CategoryId == filter.CategoryId.Value));
+            var publishedToExclusive = filter.EndDate
+                .Value
+                .Date
+                .AddDays(1);
+
+            query = query.Where(a =>
+                a.PublishedAt < publishedToExclusive);
         }
 
-        var total = await query.CountAsync(ct);
+        var totalCount = await query.CountAsync(ct);
 
         var items = await query
-            .Include(announcement => announcement.AnnouncementCategory)
-            .ThenInclude(link => link.Category)
-            .OrderByDescending(announcement => announcement.CreatedAt)
-            .ThenBy(announcement => announcement.Id)
-            .Skip((filter.Page - 1) * filter.PageSize)
-            .Take(filter.PageSize)
+            .Include(a => a.AnnouncementCategory)
+                .ThenInclude(ac => ac.Category)
+            .OrderByDescending(a => a.PublishedAt)
+            .ThenByDescending(a => a.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
-        return (items, total);
-
+        return (items, totalCount);
     }
-
-    public async Task<IEnumerable<Announcement>> GetAnnouncementsAsync(CancellationToken cancellationToken)
+    public async Task<Announcement?> GetDetailedByIdAsync(
+        Guid announcementId,
+        AnnouncementRoleReceived userRole,
+        CancellationToken ct = default)
     {
-        var resultSet = await _context.Announcements.OrderByDescending(a => a.CreatedAt).ToListAsync();
-        return resultSet;
+        return await _context.Announcements
+            .AsNoTracking()
+            .Include(a => a.AnnouncementCategory)
+                .ThenInclude(ac => ac.Category)
+            .FirstOrDefaultAsync(
+                a =>
+                    a.Id == announcementId &&
+                    !a.IsDeleted &&
+                    a.Status == AnnouncementStatus.Published &&
+                    a.CreatedAt <= DateTime.UtcNow &&
+                    a.RoleReceived <= userRole,
+                ct);
     }
-
 }
+

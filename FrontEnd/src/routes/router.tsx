@@ -10,7 +10,7 @@ const SignUp = lazy(() => import('../pages/SignUp'));
 
 const AnnouncementPublish = () => <div>Announcement / Publish</div>;
 const AnnouncementManage  = () => <div>Announcement / Manage</div>;
-const UsersManage         = () => <div>Users / Manage</div>;
+const UsersManage = lazy(() => import('../pages/UserManage'));
 
 export const router = createBrowserRouter([
   {

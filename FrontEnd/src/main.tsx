@@ -1,16 +1,30 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-// import App from './App.tsx'
-import { RouterProvider } from 'react-router/dom'
-import { router } from './routes/router.tsx'
-import { ToastProvider } from './components/Toast/ToastProvider.tsx'
+import { StrictMode, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
+import { RouterProvider } from 'react-router';
+import { ConfigProvider, theme } from 'antd';
+import { router } from './routes/router';
+import { ThemeProvider, useThemeMode } from './contexts/ThemeContext';
+import './index.css';
+
+function ThemedApp() {
+  const { mode } = useThemeMode();
+  return (
+    <ConfigProvider
+      theme={{
+        algorithm: mode === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
+      }}
+    >
+      <Suspense fallback={<div>Loading…</div>}>
+        <RouterProvider router={router} />
+      </Suspense>
+    </ConfigProvider>
+  );
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ToastProvider>
-      <RouterProvider router={router}>
-      </RouterProvider>
-    </ToastProvider>
-  </StrictMode>,
-)
+    <ThemeProvider>
+      <ThemedApp />
+    </ThemeProvider>
+  </StrictMode>
+);

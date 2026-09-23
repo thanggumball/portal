@@ -5,14 +5,16 @@ using StudentPortal.API.Extensions;
 using StudentPortal.API.Middlewares;
 using StudentPortal.Common.DTOs.Shared;
 using StudentPortal.Service;
+using StudentPortal.Service.Implementations;
+using StudentPortal.Service.Interfaces;
 using StudentPortal.Service.Validations.Auth;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// log4net.config uses %property{LogRoot} to write logs into Logs/ at the content root,
-// because log4net resolves relative paths against AppDomain.BaseDirectory (the build
-// output folder) by default, not wherever `dotnet run` is invoked from.
-log4net.GlobalContext.Properties["LogRoot"] = builder.Environment.ContentRootPath;
+//file log will appear next program.cs
+log4net.GlobalContext.Properties["LogDir"] =
+    Path.Combine(builder.Environment.ContentRootPath, "Logs");
 
 builder.Logging.ClearProviders();
 builder.Logging.AddLog4Net("log4net.config");
@@ -54,6 +56,13 @@ builder.Services.AddCorsPolicy(
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 
+builder.Services.AddHttpClient<IMailServiceClient, MailServiceClient>(
+    client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["MailService:BaseUrl"]!);
+    });
+
 var connectionString = builder.Configuration.GetConnectionString(
     "DefaultConnection")
     ?? throw new InvalidOperationException(
@@ -64,8 +73,9 @@ builder.Services.AddServiceLayer(connectionString);
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-app.UseMiddleware<ExceptionHandlingMiddleware>();   // outermost
 app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseMiddleware<ExceptionHandlingMiddleware>();   // outermost
+
 
 if (app.Environment.IsDevelopment())
 {

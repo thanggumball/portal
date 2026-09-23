@@ -14,18 +14,30 @@ namespace StudentPortal.API.Controllers;
 public class AnnouncementsController : ControllerBase
 {
     private readonly IAnnouncementService _announcementService;
-    public AnnouncementsController(
-        IAnnouncementService announcementService)
+    public AnnouncementsController (IAnnouncementService announcementService)
     {
         _announcementService = announcementService;
     }
-    [Authorize(Roles = RoleConstants.Admin)]
     [HttpGet]
-    public async Task<IActionResult> Search([FromQuery] AnnouncementFilter filter, CancellationToken ct)
+    [Authorize]
+    public async Task<IActionResult> SearchAsync(
+        [FromQuery] AnnouncementFilter filter,
+        CancellationToken ct)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
         var result = await _announcementService.SearchAsync(
             filter,
+            userId,
             ct);
+
+        return Ok(result);
+    }
 
         return Ok(
             ApiResponse<PagedResult<AnnouncementResponse>>

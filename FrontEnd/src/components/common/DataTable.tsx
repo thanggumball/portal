@@ -119,7 +119,7 @@ export default function DataTable<T extends { id: string | number; isActive?: bo
     ];
 
     return (
-    <div style={{ height: '100%', overflowY: 'auto' }}>
+    <div className="datatable-scroll" style={{ height: '100%', overflow: 'auto' }}>
         <Table<Row>
             dataSource={displayData}
             columns={columns}

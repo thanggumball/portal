@@ -1,9 +1,11 @@
+using StudentPortal.Common.DTOs.Mail;
 using StudentPortal.Common.DTOs.User;
 using StudentPortal.Common.Enums;
 using StudentPortal.Common.Exceptions;
 using StudentPortal.Repository.Entities;
 using StudentPortal.Repository.Interfaces;
 using StudentPortal.Service.Interfaces;
+using StudentPortal.Service.Mappers;
 
 namespace StudentPortal.Service.Implementations;
 
@@ -17,17 +19,20 @@ public class UserService : IUserService
     private readonly IRoleRepository _roleRepository;
     private readonly IAccountSequenceRepository _accountSequenceRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMailServiceClient _mailServiceClient;
 
     public UserService(
         IUserRepository userRepository,
         IRoleRepository roleRepository,
         IAccountSequenceRepository accountSequenceRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMailServiceClient mailServiceClient)
     {
         _userRepository = userRepository;
         _roleRepository = roleRepository;
         _accountSequenceRepository = accountSequenceRepository;
         _unitOfWork = unitOfWork;
+        _mailServiceClient = mailServiceClient;
     }
 
     public async Task<UserResponse> CreateUserAsync(
@@ -114,6 +119,16 @@ public class UserService : IUserService
             await _userRepository.AddAsync(user, ct);
 
             await _unitOfWork.SaveChangesAsync(ct);
+
+            await _mailServiceClient.CreateAccountAsync(
+                new CreateMailAccountRequest
+                {
+                    Email = email,
+                    Password = DefaultPassword,
+                    FullName = user.FullName
+                },
+                ct);
+
             await transaction.CommitAsync(ct);
 
             return new UserResponse
@@ -135,5 +150,59 @@ public class UserService : IUserService
             await transaction.RollbackAsync(ct);
             throw;
         }
+    }
+
+    public async Task<UserResponse> UpdateUserAsync(
+        Guid userId,
+        UpdateUserRequest request,
+        CancellationToken ct = default)
+    {
+        var user = await _userRepository.GetByIdAsync(userId, ct);
+
+        if (user is null || user.IsDeleted)
+        {
+            throw new NotFoundException("User not found.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            throw new BadRequestException("Full name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.RoleName))
+        {
+            throw new BadRequestException("Role is required.");
+        }
+
+        var roleName = request.RoleName.Trim();
+
+        if (roleName != StaffRole && roleName != StudentRole)
+        {
+            throw new BadRequestException(
+                "Role must be either Staff or Student.");
+        }
+
+        var role = await _roleRepository.FindByNameAsync(
+            roleName,
+            ct);
+
+        if (role is null)
+        {
+            throw new NotFoundException(
+                $"Role '{roleName}' was not found.");
+        }
+
+        user.FullName = request.FullName.Trim();
+        user.RoleId = role.Id;
+        user.Role = role;
+        user.Status = request.Status;
+        user.AvatarUrl = request.AvatarUrl;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        _userRepository.Update(user);
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return UserMapper.ToResponse(user);
     }
 }

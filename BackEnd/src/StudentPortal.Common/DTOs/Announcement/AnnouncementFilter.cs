@@ -5,8 +5,10 @@ namespace StudentPortal.Common.DTOs.Announcement;
 
 public class AnnouncementFilter : PagingRequest
 {
-    public AnnouncementStatus? Status { get; set; }
     public string? Keyword { get; set; }
-    public AnnouncementRoleReceived? RoleReceived { get; set; }
+    public AnnouncementStatus? Status { get; set; }
     public Guid? CategoryId { get; set; }
+    public string? CategoryName { get; set; }
+    public DateTime? StartDate { get; set; } = DateTime.Now;
+    public DateTime? EndDate { get; set; } = DateTime.Now;
 }

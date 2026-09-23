@@ -46,11 +46,15 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    public Task<IActionResult> Update(
+    public async Task<IActionResult> Update(
         Guid id,
         UpdateUserRequest request,
         CancellationToken ct)
-        => throw new NotImplementedException();
+    {
+        var result = await _userService.UpdateUserAsync(id, request, ct);
+
+        return Ok(result);
+    }
 
     [HttpPatch("{id:guid}/status")]
     public Task<IActionResult> UpdateStatus(
