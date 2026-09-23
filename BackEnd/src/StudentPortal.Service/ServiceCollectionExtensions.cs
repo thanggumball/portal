@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddRepositoryLayer(connectionString);
         services.AddScoped<IAccountSequenceRepository, AccountSequenceRepository>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailWhitelistService, EmailWhitelistService>();
         services.AddScoped<IJwtTokenHelper, JwtTokenHelper>();

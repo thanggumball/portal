@@ -39,10 +39,83 @@ public class UserRepository : GenericRepository<User>, IUserRepository
                 ct);
 
     public async Task<(IReadOnlyList<User> Items, int Total)> SearchAsync(
-        UserFilter filter,
-        CancellationToken ct = default)
+    UserFilter filter,
+    CancellationToken ct = default)
     {
-        throw new NotImplementedException();
+        var query = _context.Users
+            .AsNoTracking()
+            .Include(u => u.Role)
+            .Where(u => !u.IsDeleted);
+
+        if (filter.RoleId.HasValue)
+        {
+            query = query.Where(u => u.RoleId == filter.RoleId.Value);
+        }
+
+        if (filter.Status.HasValue)
+        {
+            query = query.Where(u => u.Status == filter.Status.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Email))
+        { 
+            query = query.Where(u => u.Email.Contains(filter.Email));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.UserName))
+        {
+            query = query.Where(u => u.UserName.Contains(filter.UserName));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.FullName))
+        {
+            query = query.Where(u => u.FullName.Contains(filter.FullName));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.UserCode))
+        {
+            query = query.Where(u => u.UserCode != null && u.UserCode.Contains(filter.UserCode));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Keyword))
+        {
+            var kw = filter.Keyword;
+            query = query.Where(u =>
+                u.Email.Contains(kw) ||
+                u.UserName.Contains(kw) ||
+                u.FullName.Contains(kw) ||
+                (u.UserCode != null && u.UserCode.Contains(kw)));
+        }
+
+        if (filter.CreatedFrom.HasValue)
+        {
+            query = query.Where(u => u.CreatedAt >= filter.CreatedFrom.Value);
+        }
+
+        if (filter.CreatedTo.HasValue)
+        {
+            query = query.Where(u => u.CreatedAt <= filter.CreatedTo.Value);
+        }
+
+        if (filter.LastLoginFrom.HasValue)
+        {
+            query = query.Where(u => u.LastLoginAt >= filter.LastLoginFrom.Value);
+        }
+
+        if (filter.LastLoginTo.HasValue)
+        {
+            query = query.Where(u => u.LastLoginAt <= filter.LastLoginTo.Value);
+        }
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
+            .OrderByDescending(u => u.CreatedAt)
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync(ct);
+
+        return (items, total);
     }
 
     public async Task<User?> GetByIdWithRoleAsync(

@@ -45,20 +45,28 @@ export default function SimpleForm({
   };
 
   const extraProps = (attr: Attribute) => {
-    if (attr.type === 'date') return {
-      getValueProps: (v: unknown) => ({ value: v ? dayjs(Number(v)) : null }),
-      normalize: (v: unknown) => (v ? dayjs(v as string).valueOf() : null),
-    };
-    if (attr.type === 'year') return {
-      getValueProps: (v: unknown) => ({ value: v ? dayjs().year(Number(v)) : null }),
-      normalize: (v: unknown) => (v ? dayjs(v as string).year() : null),
-    };
-    if (attr.type === 'month') return {
-      getValueProps: (v: unknown) => ({ value: v ? dayjs(v as string, 'MM-YYYY') : null }),
-      normalize: (v: unknown) => (v ? dayjs(v as string).format('MM-YYYY') : null),
-    };
-    if (attr.type === 'boolean' || attr.type === 'checkbox') return { valuePropName: 'checked' };
-    return {};
+    switch (attr.type) {
+      case 'date':
+        return {
+          getValueProps: (v: unknown) => ({ value: v ? dayjs(v as string | number) : null }),
+          normalize:     (v: unknown) => (v ? dayjs(v as string).toISOString() : null),
+        };
+      case 'year':
+        return {
+          getValueProps: (v: unknown) => ({ value: v ? dayjs().year(Number(v)) : null }),
+          normalize:     (v: unknown) => (v ? dayjs(v as string).year() : null),
+        };
+      case 'month':
+        return {
+          getValueProps: (v: unknown) => ({ value: v ? dayjs(v as string, 'MM-YYYY') : null }),
+          normalize:     (v: unknown) => (v ? dayjs(v as string).format('MM-YYYY') : null),
+        };
+      case 'boolean':
+      case 'checkbox':
+        return { valuePropName: 'checked' };
+      default:
+        return {};
+    }
   };
 
   const initialValue = (attr: Attribute) => {
