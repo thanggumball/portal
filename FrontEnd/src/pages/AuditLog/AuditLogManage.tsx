@@ -17,17 +17,22 @@ const auditLogFilterMapper: Attribute[] = [
   { key: 'to',         title: 'To',     type: 'date' },
 ];
 
+// Entity ID (a raw GUID) and IP only make sense when looking at one log, so they live on the detail page
 const auditLogColumnMapper: Attribute[] = [
-  { key: 'createdAt',  title: 'Time',      type: 'datetime' },
-  { key: 'userName',   title: 'User',      type: 'string' },
-  { key: 'action',     title: 'Action',    type: 'string' },
-  { key: 'entityName', title: 'Entity',    type: 'string' },
-  { key: 'entityId',   title: 'Entity ID', type: 'string' },
-  { key: 'ipAddress',  title: 'IP',        type: 'string' },
+  { key: 'createdAt',  title: 'Time',   type: 'datetime' },
+  { key: 'userName',   title: 'User',   type: 'string' },
+  { key: 'action',     title: 'Action', type: 'string' },
+  { key: 'entityName', title: 'Entity', type: 'string' },
 ];
 
 export default function AuditLogManage() {
   const { logs, total, params, setParams, loading, refetch } = useAuditLogs();
+
+  // No user means the change was not made by a signed-in person (e.g. during login)
+  const rows = useMemo(
+    () => logs.map((l) => ({ ...l, userName: l.userName ?? '(system)' })),
+    [logs]
+  );
 
   const filters: Filter[] = useMemo(
     () =>
@@ -62,7 +67,7 @@ export default function AuditLogManage() {
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <DataTable
           name="audit log"
-          dataSource={logs}
+          dataSource={rows}
           attributeMapper={auditLogColumnMapper}
           reference={{ path: path.auditLogs.detail, key: 'id' }}
           pageNumber={params.page ?? 1}
