@@ -39,7 +39,7 @@ const formatForDisplay = (item: Record<string, unknown>, mapper: Attribute[]) =>
         out[f.key] = v ? dayjs(v as string | number).format('DD-MM-YYYY') : '';
         break;
       case 'datetime':
-        // Backend stores UTC but sends it without a trailing Z, so tell dayjs it is UTC
+        // Backend sends UTC with a trailing Z; dayjs.utc() also copes with older values that lack it
         out[f.key] = v ? dayjs.utc(v as string).local().format('DD-MM-YYYY HH:mm:ss') : '';
         break;
       case 'year':

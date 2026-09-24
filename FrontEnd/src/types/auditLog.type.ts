@@ -23,9 +23,15 @@ export interface AuditLogListItem {
   createdAt: string;
 }
 
-export interface AuditLogDetail extends AuditLogListItem {
+// Values are already display text from the backend; null means the value was empty / absent
+export interface AuditLogChange {
+  field: string;
   oldValue: string | null;
   newValue: string | null;
+}
+
+export interface AuditLogDetail extends AuditLogListItem {
+  changes: AuditLogChange[];
 }
 
 export interface AuditLogFilterParams {
