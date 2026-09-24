@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\StudentPortal.API\StudentPortal.API.csproj" />
     <ProjectReference Include="..\..\src\StudentPortal.Service\StudentPortal.Service.csproj" />
     <ProjectReference Include="..\..\src\StudentPortal.Repository\StudentPortal.Repository.csproj" />
     <ProjectReference Include="..\..\src\StudentPortal.Common\StudentPortal.Common.csproj" />
