@@ -48,8 +48,10 @@ public class AuditLogsControllerTests
             EntityId = Guid.NewGuid().ToString(),
             IpAddress = "::1",
             CreatedAt = DateTime.UtcNow,
-            OldValue = "{\"FullName\":\"An\"}",
-            NewValue = "{\"FullName\":\"Binh\"}"
+            Changes = new[]
+            {
+                new AuditLogChange { Field = "FullName", OldValue = "An", NewValue = "Binh" }
+            }
         };
     }
 
@@ -198,8 +200,8 @@ public class AuditLogsControllerTests
         body.Success.Should().BeTrue();
         body.Data.Should().BeSameAs(detail);
         body.Data!.Id.Should().Be(id);
-        body.Data.OldValue.Should().Be("{\"FullName\":\"An\"}");
-        body.Data.NewValue.Should().Be("{\"FullName\":\"Binh\"}");
+        body.Data.Changes.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new AuditLogChange { Field = "FullName", OldValue = "An", NewValue = "Binh" });
     }
 
     [Fact]

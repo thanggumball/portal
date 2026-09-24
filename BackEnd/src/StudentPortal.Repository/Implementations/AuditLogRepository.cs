@@ -63,7 +63,8 @@ public class AuditLogRepository : IAuditLogRepository
                 EntityName = a.EntityName,
                 EntityId = a.EntityId,
                 IpAddress = a.IpAddress,
-                CreatedAt = a.CreatedAt
+                // Stored as UTC, but EF reads it back as Unspecified - without this the JSON has no "Z"
+                CreatedAt = DateTime.SpecifyKind(a.CreatedAt, DateTimeKind.Utc)
             })
             .ToListAsync(ct);
 

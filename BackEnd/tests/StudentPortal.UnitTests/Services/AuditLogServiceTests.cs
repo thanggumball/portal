@@ -11,12 +11,28 @@ namespace StudentPortal.UnitTests.Services;
 public class AuditLogServiceTests
 {
     private readonly Mock<IAuditLogRepository> _auditLogRepository = new();
+    private readonly Mock<IRoleRepository> _roleRepository = new();
+    private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+
+    public AuditLogServiceTests()
+    {
+        // Default: empty lookups, so tests that do not care about names still run
+        _roleRepository
+            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Role>());
+
+        _userRepository
+            .Setup(r => r.GetUserNamesAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string>());
+    }
 
     private AuditLogService CreateService()
     {
         return new AuditLogService(
             _auditLogRepository.Object,
+            _roleRepository.Object,
+            _userRepository.Object,
             _unitOfWork.Object);
     }
 
@@ -179,8 +195,75 @@ public class AuditLogServiceTests
         result.EntityId.Should().Be(log.EntityId);
         result.IpAddress.Should().Be("127.0.0.1");
         result.CreatedAt.Should().Be(log.CreatedAt);
-        result.OldValue.Should().Be("{\"FullName\":\"An\"}");
-        result.NewValue.Should().Be("{\"FullName\":\"Binh\"}");
+        result.CreatedAt.Kind.Should().Be(DateTimeKind.Utc, "the JSON must end with Z");
+        result.Changes.Should().ContainSingle();
+        result.Changes[0].Field.Should().Be("FullName");
+        result.Changes[0].OldValue.Should().Be("An");
+        result.Changes[0].NewValue.Should().Be("Binh");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WhenCreatedAtIsUnspecified_ShouldReturnItAsUtc()
+    {
+        // Arrange - EF reads datetime2 back as Unspecified
+        var log = CreateAuditLog();
+        log.CreatedAt = new DateTime(2026, 9, 24, 3, 0, 0, DateTimeKind.Unspecified);
+
+        _auditLogRepository
+            .Setup(r => r.GetByIdAsync(log.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(log);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetByIdAsync(log.Id);
+
+        // Assert
+        result.CreatedAt.Kind.Should().Be(DateTimeKind.Utc);
+        result.CreatedAt.Ticks.Should().Be(log.CreatedAt.Ticks, "only the Kind changes, not the time");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ShouldReplaceRoleAndUserIdsWithNames()
+    {
+        // Arrange
+        var studentRole = new Role { Id = Guid.NewGuid(), Name = "Student" };
+        var staffRole = new Role { Id = Guid.NewGuid(), Name = "Staff" };
+        var editorId = Guid.NewGuid();
+
+        var log = CreateAuditLog();
+        log.OldValue = $"{{\"RoleId\":\"{studentRole.Id}\",\"UpdatedBy\":null}}";
+        log.NewValue = $"{{\"RoleId\":\"{staffRole.Id}\",\"UpdatedBy\":\"{editorId}\"}}";
+
+        _auditLogRepository
+            .Setup(r => r.GetByIdAsync(log.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(log);
+
+        _roleRepository
+            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Role> { studentRole, staffRole });
+
+        _userRepository
+            .Setup(r => r.GetUserNamesAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string> { [editorId] = "admin" });
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetByIdAsync(log.Id);
+
+        // Assert
+        result.Changes.Should().BeEquivalentTo(new[]
+        {
+            new AuditLogChange { Field = "RoleId", OldValue = "Student", NewValue = "Staff" },
+            new AuditLogChange { Field = "UpdatedBy", OldValue = null, NewValue = "admin" }
+        }, o => o.WithStrictOrdering());
+
+        _userRepository.Verify(
+            r => r.GetUserNamesAsync(
+                It.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { editorId })),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

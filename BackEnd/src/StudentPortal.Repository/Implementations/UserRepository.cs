@@ -126,4 +126,18 @@ public class UserRepository : GenericRepository<User>, IUserRepository
         .FirstOrDefaultAsync(
             u => u.Id == id && !u.IsDeleted,
             ct);
+
+    // Deliberately includes soft-deleted users - old audit logs can still point to them
+    public async Task<IReadOnlyDictionary<Guid, string>> GetUserNamesAsync(
+        IEnumerable<Guid> ids,
+        CancellationToken ct = default)
+    {
+        var idList = ids.Distinct().ToList();
+        if (idList.Count == 0) return new Dictionary<Guid, string>();
+
+        return await _context.Users
+            .AsNoTracking()
+            .Where(u => idList.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.UserName, ct);
+    }
 }
