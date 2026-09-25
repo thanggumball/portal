@@ -1,9 +1,10 @@
+using System.Text.Json;
 using StudentPortal.Common.DTOs.AuditLog;
 using StudentPortal.Common.DTOs.Shared;
+using StudentPortal.Common.Enums;
 using StudentPortal.Common.Exceptions;
 using StudentPortal.Repository.Entities;
 using StudentPortal.Repository.Interfaces;
-using StudentPortal.Service.Helpers;
 using StudentPortal.Service.Interfaces;
 
 namespace StudentPortal.Service.Implementations;
@@ -49,11 +50,39 @@ public class AuditLogService : IAuditLogService
         var log = await _auditLogRepository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException($"Audit log {id} was not found.");
 
-        // Look up names here so the client gets "Staff" / "admin" instead of raw Guids
-        var roleNames = (await _roleRepository.GetAllAsync(ct)).ToDictionary(r => r.Id, r => r.Name);
+        // Step 1: JSON -> plain text per field, e.g. { "Status": "3", "FullName": "An" }
+        var oldValues = ReadJson(log.OldValue);
+        var newValues = ReadJson(log.NewValue);
 
-        var userIds = AuditChangeBuilder.CollectGuids(log.OldValue, log.NewValue, AuditChangeBuilder.UserReferenceFields);
-        var userNames = await _userRepository.GetUserNamesAsync(userIds, ct);
+        // Step 2: load role and user names, so Guids can be shown as names
+        var roleNames = (await _roleRepository.GetAllAsync(ct))
+            .ToDictionary(r => r.Id, r => r.Name);
+
+        var userNames = await _userRepository.GetUserNamesAsync(
+            GetUserIds(oldValues, newValues),
+            ct);
+
+        // Step 3: compare field by field, keep only the fields that changed
+        var changes = new List<AuditLogChange>();
+
+        foreach (var field in newValues.Keys.Union(oldValues.Keys))
+        {
+            oldValues.TryGetValue(field, out var oldValue);
+            newValues.TryGetValue(field, out var newValue);
+
+            // Older logs (written before the mapper fix) also contain columns that did not change
+            if (oldValue == newValue)
+            {
+                continue;
+            }
+
+            changes.Add(new AuditLogChange
+            {
+                Field = field,
+                OldValue = ToReadable(log.EntityName, field, oldValue, roleNames, userNames),
+                NewValue = ToReadable(log.EntityName, field, newValue, roleNames, userNames)
+            });
+        }
 
         return new AuditLogDetail
         {
@@ -66,7 +95,7 @@ public class AuditLogService : IAuditLogService
             IpAddress = log.IpAddress,
             // Stored as UTC, but EF reads it back as Unspecified - without this the JSON has no "Z"
             CreatedAt = DateTime.SpecifyKind(log.CreatedAt, DateTimeKind.Utc),
-            Changes = AuditChangeBuilder.Build(log.EntityName, log.OldValue, log.NewValue, roleNames, userNames)
+            Changes = changes
         };
     }
 
@@ -91,5 +120,125 @@ public class AuditLogService : IAuditLogService
         }, ct);
 
         await _unitOfWork.SaveChangesAsync(ct);
+    }
+
+    // {"Status":3,"IsDeleted":false} -> { "Status": "3", "IsDeleted": "false" }
+    // Empty or broken JSON -> empty dictionary, so one bad log cannot break the API
+    private static Dictionary<string, string?> ReadJson(string? json)
+    {
+        var result = new Dictionary<string, string?>();
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return result;
+        }
+
+        try
+        {
+            var values = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+
+            if (values is null)
+            {
+                return result;
+            }
+
+            foreach (var (field, value) in values)
+            {
+                if (value.ValueKind == JsonValueKind.Null)
+                {
+                    result[field] = null;
+                }
+                else if (value.ValueKind == JsonValueKind.String)
+                {
+                    result[field] = value.GetString();
+                }
+                else
+                {
+                    // Numbers and true / false
+                    result[field] = value.GetRawText();
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Broken log -> treat it as "no values"
+        }
+
+        return result;
+    }
+
+    // Turns one stored value into text a person can read
+    private static string? ToReadable(
+        string entityName,
+        string field,
+        string? value,
+        Dictionary<Guid, string> roleNames,
+        IReadOnlyDictionary<Guid, string> userNames)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (field == "RoleId" && Guid.TryParse(value, out var roleId) && roleNames.ContainsKey(roleId))
+        {
+            return roleNames[roleId];
+        }
+
+        if ((field == "CreatedBy" || field == "UpdatedBy")
+            && Guid.TryParse(value, out var userId)
+            && userNames.ContainsKey(userId))
+        {
+            return userNames[userId];
+        }
+
+        // Enums are stored as numbers in the log. A number that is not in the enum is shown as it is.
+        if (field == "Status" && entityName == "User" && int.TryParse(value, out var userStatus))
+        {
+            return Enum.GetName(typeof(UserStatus), userStatus) ?? value;
+        }
+
+        if (field == "Status" && entityName == "Announcement" && int.TryParse(value, out var announcementStatus))
+        {
+            return Enum.GetName(typeof(AnnouncementStatus), announcementStatus) ?? value;
+        }
+
+        if (field == "RoleReceived" && int.TryParse(value, out var roleReceived))
+        {
+            return Enum.GetName(typeof(AnnouncementRoleReceived), roleReceived) ?? value;
+        }
+
+        if (value == "true")
+        {
+            return "Yes";
+        }
+
+        if (value == "false")
+        {
+            return "No";
+        }
+
+        return value;
+    }
+
+    // Collects the Guids in CreatedBy / UpdatedBy, so all user names are loaded in one query
+    private static List<Guid> GetUserIds(
+        Dictionary<string, string?> oldValues,
+        Dictionary<string, string?> newValues)
+    {
+        var ids = new List<Guid>();
+
+        foreach (var values in new[] { oldValues, newValues })
+        {
+            foreach (var field in new[] { "CreatedBy", "UpdatedBy" })
+            {
+                if (values.TryGetValue(field, out var value) && Guid.TryParse(value, out var id))
+                {
+                    ids.Add(id);
+                }
+            }
+        }
+
+        return ids;
     }
 }

@@ -327,6 +327,139 @@ public class AuditLogServiceTests
     }
 
     // =========================================================
+    // GET BY ID - CHANGES
+    // =========================================================
+
+    // Runs GetByIdAsync on a log with the given JSON and returns only its changes
+    private async Task<IReadOnlyList<AuditLogChange>> GetChangesAsync(
+        string? oldJson,
+        string? newJson,
+        string entityName = "User")
+    {
+        var log = CreateAuditLog();
+        log.EntityName = entityName;
+        log.OldValue = oldJson;
+        log.NewValue = newJson;
+
+        _auditLogRepository
+            .Setup(r => r.GetByIdAsync(log.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(log);
+
+        var result = await CreateService().GetByIdAsync(log.Id);
+
+        return result.Changes;
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_OnUpdate_ShouldReturnOnlyFieldsThatChanged()
+    {
+        // Arrange
+        var oldJson = "{\"FullName\":\"An\",\"Email\":\"a@x.com\",\"AvatarUrl\":null}";
+        var newJson = "{\"FullName\":\"Bình\",\"Email\":\"a@x.com\",\"AvatarUrl\":\"a.png\"}";
+
+        // Act
+        var changes = await GetChangesAsync(oldJson, newJson);
+
+        // Assert
+        changes.Should().BeEquivalentTo(new[]
+        {
+            new AuditLogChange { Field = "FullName", OldValue = "An", NewValue = "Bình" },
+            new AuditLogChange { Field = "AvatarUrl", OldValue = null, NewValue = "a.png" }
+        }, o => o.WithStrictOrdering());
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WhenNothingChanged_ShouldReturnNoChanges()
+    {
+        // Arrange - older "login" logs, written before the mapper skipped unchanged columns
+        var json = "{\"FullName\":\"An\",\"Status\":1}";
+
+        // Act
+        var changes = await GetChangesAsync(json, json);
+
+        // Assert
+        changes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_OnCreate_ShouldReturnNewValuesWithNullOldValues()
+    {
+        // Act
+        var changes = await GetChangesAsync(null, "{\"FullName\":\"An\",\"Email\":\"a@x.com\"}");
+
+        // Assert
+        changes.Select(c => c.Field).Should().Equal("FullName", "Email");
+        changes.Should().OnlyContain(c => c.OldValue == null);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_OnDelete_ShouldReturnOldValuesWithNullNewValues()
+    {
+        // Act
+        var changes = await GetChangesAsync("{\"FullName\":\"An\",\"Email\":\"a@x.com\"}", null);
+
+        // Assert
+        changes.Select(c => c.Field).Should().Equal("FullName", "Email");
+        changes.Should().OnlyContain(c => c.NewValue == null);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithUnknownRoleId_ShouldKeepTheGuid()
+    {
+        // Arrange - no roles set up, so the id cannot be found
+        var unknownRoleId = Guid.NewGuid().ToString();
+
+        // Act
+        var changes = await GetChangesAsync(null, $"{{\"RoleId\":\"{unknownRoleId}\"}}");
+
+        // Assert
+        changes.Single().NewValue.Should().Be(unknownRoleId);
+    }
+
+    [Theory]
+    [InlineData("User", "Status", 3, "Locked")]
+    [InlineData("Announcement", "Status", 2, "Published")]
+    [InlineData("Announcement", "RoleReceived", 3, "Staff")]
+    [InlineData("User", "Status", 99, "99")]
+    [InlineData("Role", "Status", 1, "1")]
+    public async Task GetByIdAsync_WithEnumNumber_ShouldReturnEnumName(
+        string entityName, string field, int value, string expected)
+    {
+        // Act
+        var changes = await GetChangesAsync(null, $"{{\"{field}\":{value}}}", entityName);
+
+        // Assert
+        changes.Single().NewValue.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithBooleanAndNull_ShouldReturnYesNoAndNull()
+    {
+        // Act
+        var changes = await GetChangesAsync(
+            "{\"IsPinned\":false,\"Note\":\"x\"}",
+            "{\"IsPinned\":true,\"Note\":null}");
+
+        // Assert
+        changes.Should().BeEquivalentTo(new[]
+        {
+            new AuditLogChange { Field = "IsPinned", OldValue = "No", NewValue = "Yes" },
+            new AuditLogChange { Field = "Note", OldValue = "x", NewValue = null }
+        }, o => o.WithStrictOrdering());
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithBrokenJson_ShouldNotThrowAndUseTheOtherSide()
+    {
+        // Act
+        var changes = await GetChangesAsync("{abc", "{\"FullName\":\"An\"}");
+
+        // Assert
+        changes.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new AuditLogChange { Field = "FullName", OldValue = null, NewValue = "An" });
+    }
+
+    // =========================================================
     // LOG (manual audit row)
     // =========================================================
 
